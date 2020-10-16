@@ -32,20 +32,21 @@ publish()
 
 setuptools.setup(
     name=__title__,
+    packages=[__title__],
+    package_dir={__title__: __title__},
+    url=f'https://github.com/ampledata/{__title__}',
     version=__version__,
     description='ADS-B Cursor-on-Target Gateway.',
     author='Greg Albrecht',
     author_email='oss@undef.net',
-    packages=[__title__],
     package_data={'': ['LICENSE']},
-    package_dir={__title__: __title__},
     license=open('LICENSE').read(),
     long_description=open('README.rst').read(),
-    url='https://github.com/ampledata/adsbcot',
     zip_safe=False,
     include_package_data=True,
     install_requires=[
-        'pycot >= 2.3.1'
+        'pycot >= 2.3.0',
+        'requests'
     ],
     classifiers=[
         'Topic :: Communications :: Ham Radio',
