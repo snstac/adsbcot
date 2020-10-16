@@ -5,7 +5,6 @@
 
 import logging
 import os
-import re
 
 __author__ = 'Greg Albrecht W2GMD <oss@undef.net>'
 __copyright__ = 'Copyright 2020 Orion Labs, Inc.'

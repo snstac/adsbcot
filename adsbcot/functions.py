@@ -12,7 +12,7 @@ __copyright__ = 'Copyright 2020 Orion Labs, Inc.'
 __license__ = 'Apache License, Version 2.0'
 
 
-def adsb_to_cot(craft: dict, cot_type: str = None) -> pycot.Event:
+def adsb_to_cot(craft: dict, cot_type: str = None) -> pycot.Event:  # NOQA pylint: disable=too-many-locals
     """
     Converts a Dump 1090 ADS-B Aircraft Object to a Cursor-on-Target Event.
     """
@@ -54,7 +54,8 @@ def adsb_to_cot(craft: dict, cot_type: str = None) -> pycot.Event:
     track.speed = craft.get('gs', 0)
 
     remarks = pycot.Remarks()
-    _remark = f"ICAO24: {c_hex} Squawk: {craft.get('squawk')} RSSI: {craft.get('rssi')}"
+    _remark = (f"ICAO24: {c_hex} Squawk: {craft.get('squawk')} "
+               "RSSI: {craft.get('rssi')}")
     if flight:
         remarks.value = f"Flight: {flight} " + _remark
     else:

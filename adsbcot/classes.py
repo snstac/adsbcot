@@ -4,7 +4,6 @@
 """ADS-B Cursor-on-Target Class Definitions."""
 
 import logging
-import socket
 import threading
 import time
 
@@ -31,10 +30,13 @@ class ADSBCoT(threading.Thread):
         _logger.addHandler(_console_handler)
         _logger.propagate = False
 
-    def __init__(self, dump1090_url: str, cot_host: str, interval: int = None) -> None:
+    def __init__(self, dump1090_url: str, cot_host: str,
+                 interval: int = None) -> None:
         self.dump1090_url: str = dump1090_url
         self.cot_host: str = cot_host
         self.interval: int = interval or adsbcot.DEFAULT_INTERVAL
+
+        self.net_client = pycot.NetworkClient(self.cot_host)
 
         # Thread setup:
         threading.Thread.__init__(self)
@@ -60,14 +62,11 @@ class ADSBCoT(threading.Thread):
         self._logger.debug(
             'Sending CoT to %s : "%s"', self.cot_host, rendered_event)
 
-
         return self.net_client.sendall(rendered_event)
 
     def run(self):
         """Runs this Thread, reads ADS-B & outputs CoT."""
         self._logger.info('Running ADSBCoT Thread...')
-
-        self.net_client = pycot.NetworkClient(self.cot_host)
 
         while 1:
             response = requests.get(self.dump1090_url)
