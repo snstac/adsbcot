@@ -4,7 +4,9 @@
 """ADS-B Cursor-on-Target Class Definitions."""
 
 import logging
+import os
 import threading
+import random
 import time
 
 import pycot
@@ -75,5 +77,6 @@ class ADSBCoT(threading.Thread):
                 self._logger.debug('Retrieved %s aircraft', len(aircraft))
                 for craft in aircraft:
                     self.send_cot(craft)
-                    time.sleep(0.01)  # backoff for server
+                    if not os.environ.get('NO_RANDOM_SLEEP'):
+                        time.sleep(random.random())  # backoff for server
             time.sleep(self.interval)
