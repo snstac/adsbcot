@@ -1,0 +1,11 @@
+# Python Distribution Package Requirements for ADSB to CoT Gateway.
+#
+# Source:: https://github.com/ampledata/adsbcot
+# Author:: Greg Albrecht W2GMD <oss@undef.net>
+# Copyright:: Copyright 2020 Orion Labs, Inc.
+# License:: Apache License, Version 2.0
+
+
+flake8
+pylint
+twine
