@@ -46,8 +46,9 @@ def adsb_to_cot(craft: dict, cot_type: str = None) -> pycot.Event:  # NOQA pylin
 
     contact = pycot.Contact()
     contact.callsign = callsign
-    if flight:
-        contact.hostname = f'https://flightaware.com/live/flight/{flight}'
+    # Not supported by FTS 1.1?
+    # if flight:
+    #    contact.hostname = f'https://flightaware.com/live/flight/{flight}'
 
     track = pycot.Track()
     track.course = craft.get('track', 0)
@@ -55,7 +56,7 @@ def adsb_to_cot(craft: dict, cot_type: str = None) -> pycot.Event:  # NOQA pylin
 
     remarks = pycot.Remarks()
     _remark = (f"ICAO24: {c_hex} Squawk: {craft.get('squawk')} "
-               "RSSI: {craft.get('rssi')}")
+               f"RSSI: {craft.get('rssi')}")
     if flight:
         remarks.value = f"Flight: {flight} " + _remark
     else:
@@ -65,7 +66,8 @@ def adsb_to_cot(craft: dict, cot_type: str = None) -> pycot.Event:  # NOQA pylin
     detail.uid = uid
     detail.contact = contact
     detail.track = track
-    detail.remarks = remarks
+    # Not supported by FTS 1.1?
+    # detail.remarks = remarks
 
     event = pycot.Event()
     event.version = '2.0'
