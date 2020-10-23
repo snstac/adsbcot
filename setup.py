@@ -36,7 +36,6 @@ setuptools.setup(
     packages=[__title__],
     package_dir={__title__: __title__},
     url=f'https://github.com/ampledata/{__title__}',
-    version=__version__,
     description='ADS-B Cursor-on-Target Gateway.',
     author='Greg Albrecht',
     author_email='oss@undef.net',
