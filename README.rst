@@ -74,8 +74,9 @@ At a minimum, you'll need to specify:
 
 1. -C COT_HOST, where COT_HOST is the IP or Hostname of the CoT Event destination.
 2. One (1) of the following sets of arguments:
-  A. -D DUMP1090_URL, where DUMP1090_URL is the URL to a system running the dump1090 ADS-B decoder.
-  B. -U ADSBX_URL & -X ADSBX_API_KEY, where ADSBX_URL is the URL to a ADS-B Exchange feed you'd like to use, and ADSBX_API_KEY is your ADS-B Exchange API Key.
+    A. -D DUMP1090_URL, where DUMP1090_URL is the URL to a system running the dump1090 ADS-B decoder.
+    B. -U ADSBX_URL & -X ADSBX_API_KEY, where ADSBX_URL is the URL to a ADS-B Exchange feed you'd like to use, and ADSBX_API_KEY is your ADS-B Exchange API Key.
+
 
 Build Status
 ============
