@@ -16,11 +16,11 @@ ADS-B Cursor-on-Target Gateway.
 """
 
 from .constants import (LOG_FORMAT, LOG_LEVEL, DEFAULT_COT_PORT,  # NOQA
-                        DEFAULT_INTERVAL)
+                        DEFAULT_INTERVAL, DEFAULT_STALE, DEFAULT_TYPE)
 
 from .functions import adsb_to_cot  # NOQA
 
-from .classes import ADSBCoT  # NOQA
+from .classes import ADSBWorker, CoTWorker  # NOQA
 
 __author__ = 'Greg Albrecht W2GMD <oss@undef.net>'
 __copyright__ = 'Copyright 2020 Orion Labs, Inc.'

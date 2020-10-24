@@ -7,17 +7,21 @@ import datetime
 
 import pycot
 
+import adsbcot.constants
+
 __author__ = 'Greg Albrecht W2GMD <oss@undef.net>'
 __copyright__ = 'Copyright 2020 Orion Labs, Inc.'
 __license__ = 'Apache License, Version 2.0'
 
 
-def adsb_to_cot(craft: dict, cot_type: str = None) -> pycot.Event:  # NOQA pylint: disable=too-many-locals
+def adsb_to_cot(craft: dict, cot_type: str = None, # NOQA pylint: disable=too-many-locals
+                stale: int = None) -> pycot.Event:
     """
-    Converts a Dump 1090 ADS-B Aircraft Object to a Cursor-on-Target Event.
+    Transforms a Dump1090 ADS-B Aircraft Object to a Cursor-on-Target PLI.
     """
     time = datetime.datetime.now(datetime.timezone.utc)
-    cot_type = cot_type or 'a-n-A-C-F'
+    cot_type = cot_type or adsbcot.constants.DEFAULT_TYPE
+    stale = stale or adsbcot.constants.DEFAULT_STALE
 
     lat = craft.get('lat')
     lon = craft.get('lon')
@@ -75,7 +79,7 @@ def adsb_to_cot(craft: dict, cot_type: str = None) -> pycot.Event:  # NOQA pylin
     event.uid = name
     event.time = time
     event.start = time
-    event.stale = time + + datetime.timedelta(hours=1)  # 1 hour expire
+    event.stale = time + datetime.timedelta(hours=stale)
     event.how = 'm-g'
     event.point = point
     event.detail = detail
