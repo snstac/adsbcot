@@ -13,7 +13,7 @@ import sys
 import setuptools
 
 __title__ = 'adsbcot'
-__version__ = '2.0.0'
+__version__ = '2.1.0'
 __author__ = 'Greg Albrecht W2GMD <oss@undef.net>'
 __copyright__ = 'Copyright 2020 Orion Labs, Inc.'
 __license__ = 'Apache License, Version 2.0'
@@ -45,7 +45,8 @@ setuptools.setup(
     zip_safe=False,
     include_package_data=True,
     install_requires=[
-        'pycot >= 2.4.0',
+        'pycot >= 2.5.0',
+        'pytak >= 1.0.0'
         'requests'
     ],
     classifiers=[

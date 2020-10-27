@@ -20,7 +20,7 @@ from .constants import (LOG_FORMAT, LOG_LEVEL, DEFAULT_COT_PORT,  # NOQA
 
 from .functions import adsb_to_cot  # NOQA
 
-from .classes import ADSBWorker, CoTWorker  # NOQA
+from .classes import ADSBWorker  # NOQA
 
 __author__ = 'Greg Albrecht W2GMD <oss@undef.net>'
 __copyright__ = 'Copyright 2020 Orion Labs, Inc.'

@@ -7,6 +7,8 @@ import argparse
 import queue
 import time
 
+import pytak
+
 import adsbcot
 
 __author__ = 'Greg Albrecht W2GMD <oss@undef.net>'
@@ -59,13 +61,16 @@ def cli():
     )
     threads.append(adsbworker)
 
-    cotworker = adsbcot.CoTWorker(
-        msg_queue=msg_queue,
-        cot_host=opts.cot_host,
-        cot_port=opts.cot_port,
-        broadcast=opts.broadcast
-    )
-    threads.append(cotworker)
+    worker_count = 2
+    for wc in range(0, worker_count - 1):
+        threads.append(
+            pytak.CoTWorker(
+                msg_queue=msg_queue,
+                cot_host=opts.cot_host,
+                cot_port=opts.cot_port,
+                broadcast=opts.broadcast
+            )
+        )
 
     try:
         [thr.start() for thr in threads]  # NOQA pylint: disable=expression-not-assigned

@@ -36,7 +36,7 @@ Option A) Install from the Python Package Index::
 
 Option B) Install from this source tree::
 
-    $ git checkout https://github.com/ampledata/adsbcot.git
+    $ git clone https://github.com/ampledata/adsbcot.git
     $ cd adsbcot/
     $ python setup.py install
 
