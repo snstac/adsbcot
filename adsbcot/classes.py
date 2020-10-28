@@ -101,6 +101,9 @@ class ADSBWorker(threading.Thread):
         """Runs this Thread, Reads from Pollers."""
         self._logger.info('Running ADSBWorker')
 
+        self.msg_queue.put(
+            adsbcot.hello_event().render(encoding='UTF-8', standalone=True))
+
         while not self.stopped():
             if 'aircraft.json' in self.url:
                 self._get_dump1090_feed()
