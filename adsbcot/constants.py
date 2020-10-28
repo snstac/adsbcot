@@ -23,6 +23,6 @@ else:
         ('%(asctime)s adsbcot %(levelname)s - %(message)s'))
 
 DEFAULT_COT_PORT: int = 8087
-DEFAULT_INTERVAL: int = 60
-DEFAULT_STALE: int = 1
+DEFAULT_INTERVAL: int = 30
+DEFAULT_STALE: int = 120
 DEFAULT_TYPE: str = 'a-n-A-C-F'

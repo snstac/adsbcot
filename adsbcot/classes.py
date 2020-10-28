@@ -3,6 +3,9 @@
 
 """ADS-B Cursor-on-Target Class Definitions."""
 
+#import aiofiles
+import aiohttp
+import asyncio
 import json
 import logging
 import os
@@ -21,7 +24,10 @@ __copyright__ = 'Copyright 2020 Orion Labs, Inc.'
 __license__ = 'Apache License, Version 2.0'
 
 
-class ADSBWorker(threading.Thread):
+class ADSBWorker:
+
+    """Reads ADS-B Data from inputs, renders to CoT, and puts on queue."""
+
     _logger = logging.getLogger(__name__)
     if not _logger.handlers:
         _logger.setLevel(adsbcot.LOG_LEVEL)
@@ -30,6 +36,7 @@ class ADSBWorker(threading.Thread):
         _console_handler.setFormatter(adsbcot.LOG_FORMAT)
         _logger.addHandler(_console_handler)
         _logger.propagate = False
+    logging.getLogger('asyncio').setLevel(adsbcot.LOG_LEVEL)
 
     def __init__(self, msg_queue: queue.Queue, url: str, interval: int = None,
                  stale: int = None, api_key: str = None):
@@ -39,21 +46,7 @@ class ADSBWorker(threading.Thread):
         self.stale: int = stale
         self.api_key: str = api_key
 
-        # Thread setup:
-        threading.Thread.__init__(self)
-        self.daemon = True
-        self._stopper = threading.Event()
-
-    def stop(self):
-        """Stop the thread at the next opportunity."""
-        self._logger.debug('Stopping ADSBWorker')
-        self._stopper.set()
-
-    def stopped(self):
-        """Checks if the thread is stopped."""
-        return self._stopper.isSet()
-
-    def _put_queue(self, aircraft: list) -> None:
+    async def _put_queue(self, aircraft: list) -> None:
         if not aircraft:
             self._logger.warning('Empty aircraft list')
             return False
@@ -75,38 +68,40 @@ class ADSBWorker(threading.Thread):
 
             if rendered_event:
                 try:
-                    self.msg_queue.put(rendered_event, True, 10)
+                    await self.msg_queue.put(rendered_event)
                 except queue.Full as exc:
                     self._logger.exception(exc)
                     self._logger.warning(
                         'Lost CoT Event (queue full): "%s"', rendered_event)
             i += 1
 
-    def _get_dump1090_feed(self):
-        response = requests.get(self.url)
-        if response.ok:
-            aircraft = response.json().get('aircraft')
+    async def _get_dump1090_feed(self):
+        async with aiohttp.ClientSession() as session:
+            resp = await session.request(method='GET', url=self.url)
+            resp.raise_for_status()
+            json_resp = await resp.json()
+            aircraft = json_resp.get('aircraft')
             self._logger.debug('Retrieved %s aircraft', len(aircraft))
-            self._put_queue(aircraft)
+            await self._put_queue(aircraft)
 
-    def _get_adsbx_feed(self) -> None:
+    async def _get_adsbx_feed(self) -> None:
         headers = {'api-auth': self.api_key}
         response = requests.get(self.url, headers=headers)
         jresponse = json.loads(response.text)
         aircraft = jresponse.get('ac')
         self._logger.debug('Retrieved %s aircraft', len(aircraft))
-        self._put_queue(aircraft)
+        await self._put_queue(aircraft)
 
-    def run(self):
+    async def run(self):
         """Runs this Thread, Reads from Pollers."""
         self._logger.info('Running ADSBWorker')
 
-        self.msg_queue.put(
+        await self.msg_queue.put(
             adsbcot.hello_event().render(encoding='UTF-8', standalone=True))
 
-        while not self.stopped():
+        while True:
             if 'aircraft.json' in self.url:
-                self._get_dump1090_feed()
+                await self._get_dump1090_feed()
             else:
-                self._get_adsbx_feed()
-            time.sleep(self.interval)
+                await self._get_adsbx_feed()
+            await asyncio.sleep(self.interval)

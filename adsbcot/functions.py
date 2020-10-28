@@ -40,10 +40,16 @@ def adsb_to_cot(craft: dict, cot_type: str = None, # NOQA pylint: disable=too-ma
     point = pycot.Point()
     point.lat = lat
     point.lon = lon
-    point.ce = '10'
-    point.le = '10'
+    point.ce = '9999999.0'
+    point.le = '9999999.0'
 
-    point.hae = craft.get('alt_geom', craft.get('alt_baro', 0))
+    # alt_geom: geometric (GNSS / INS) altitude in feet referenced to the
+    #           WGS84 ellipsoid
+    alt_geom = int(craft.get('alt_geom', 0))
+    if alt_geom:
+        point.hae = alt_geom * 0.3048
+    else:
+        point.hae = '9999999.0'
 
     uid = pycot.UID()
     uid.Droid = name
@@ -55,8 +61,14 @@ def adsb_to_cot(craft: dict, cot_type: str = None, # NOQA pylint: disable=too-ma
     #    contact.hostname = f'https://flightaware.com/live/flight/{flight}'
 
     track = pycot.Track()
-    track.course = craft.get('track', 0)
-    track.speed = craft.get('gs', 0)
+    track.course = craft.get('track', '9999999.0')
+
+    # gs: ground speed in knots
+    gs = int(craft.get('gs', 0))
+    if gs:
+        track.speed = gs * 0.514444
+    else:
+        track.speed = '9999999.0'
 
     remarks = pycot.Remarks()
     _remark = (f"ICAO24: {c_hex} Squawk: {craft.get('squawk')} "
@@ -79,7 +91,7 @@ def adsb_to_cot(craft: dict, cot_type: str = None, # NOQA pylint: disable=too-ma
     event.uid = name
     event.time = time
     event.start = time
-    event.stale = time + datetime.timedelta(hours=stale)
+    event.stale = time + datetime.timedelta(seconds=stale)
     event.how = 'm-g'
     event.point = point
     event.detail = detail

@@ -5,6 +5,8 @@
 
 import argparse
 import asyncio
+import concurrent
+import os
 import queue
 import time
 
@@ -21,8 +23,7 @@ async def main(opts):
     loop = asyncio.get_running_loop()
     on_con_lost = loop.create_future()
 
-    threads: list = []
-    msg_queue: queue.Queue = queue.Queue()
+    msg_queue: asyncio.Queue = asyncio.Queue(loop=loop)
 
     adsbworker = adsbcot.ADSBWorker(
         msg_queue=msg_queue,
@@ -31,61 +32,27 @@ async def main(opts):
         stale=opts.stale,
         api_key=opts.adsbx_api_key
     )
-    threads.append(adsbworker)
 
     cot_host, cot_port = pytak.split_host(opts.cot_host, opts.cot_port)
-    transport = None
 
-    try:
-        if opts.broadcast:
-            threads.append(
-                pytak.CoTWorker(
-                    msg_queue=msg_queue,
-                    cot_host=cot_host,
-                    cot_port=cot_port,
-                    broadcast=opts.broadcast
-                )
-            )
+    client_factory = pytak.AsyncNetworkClient(msg_queue, on_con_lost)
+    transport, protocol = await loop.create_connection(
+        lambda: client_factory, cot_host, cot_port)
 
-        [thr.start() for thr in threads]  # NOQA pylint: disable=expression-not-assigned
-        msg_queue.join()
+    cotworker = pytak.AsyncCoTWorker(msg_queue, transport)
 
-        if not opts.broadcast:
-            transport, protocol = await loop.create_connection(
-                lambda: pytak.AsyncNetworkClient(msg_queue, on_con_lost),
-                cot_host, cot_port)
+    tasks: set = set()
+    executor = concurrent.futures.ThreadPoolExecutor(max_workers=4)
+    tasks.add(asyncio.ensure_future(cotworker.run()))
+    tasks.add(asyncio.ensure_future(adsbworker.run()))
+    tasks.add(await on_con_lost)
+    tasks.add(asyncio.ensure_future(msg_queue.join()))
 
-            async def _work_queue():
-                #self._logger.debug('Working Queue')
-                while not on_con_lost.done():
-                    try:
-                        msg = await loop.run_in_executor(
-                            None,
-                            msg_queue.get,
-                            (True, 1)
-                        )
-                        if not msg:
-                            continue
-                        #self._logger.debug('From msg_queue: "%s"', msg)
-                        transport.write(msg)
-                    except queue.Empty:
-                        pass
+    done, pending = loop.run_until_complete(
+        await asyncio.wait(tasks, return_when=asyncio.FIRST_COMPLETED))
 
-            work_queue = _work_queue()
-            await work_queue # loop.run_until_complete(work_queue)
-            await on_con_lost
-        else:
-            while all([thr.is_alive() for thr in threads]):
-                print(on_con_lost)
-                time.sleep(0.01)
-    except KeyboardInterrupt:
-        [thr.stop() for thr in
-         threads]  # NOQA pylint: disable=expression-not-assigned
-    finally:
-        [thr.stop() for thr in
-         threads]  # NOQA pylint: disable=expression-not-assigned
-        if not opts.broadcast and transport:
-            transport.close()
+    for task in done:
+        self._logger.debug('Task completed: %s', task)
 
 
 def cli():
@@ -121,7 +88,7 @@ def cli():
     )
     opts = parser.parse_args()
 
-    asyncio.run(main(opts))
+    asyncio.run(main(opts), debug=bool(os.environ.get('DEBUG')))
 
 
 if __name__ == '__main__':
