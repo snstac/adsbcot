@@ -1,9 +1,9 @@
 adsbcot - ADSB Cursor-on-Target Gateway.
 ****************************************
 
-.. image:: docs/screenshot-1601068921-25.png
-   :alt: Screenshot of ADS-B PLI in ATAK
-   :target: docs/screenshot-1601068921.png
+.. image:: https://raw.githubusercontent.com/ampledata/adsbcot/main/docs/screenshot-1604561447-25.png
+   :alt: Screenshot of ADS-B PLI in ATAK.
+   :target: https://github.com/ampledata/adsbcot/blob/main/docs/screenshot-1604561447.png
 
 
 The adsbcot ADS-B Cursor on Target Gateway transforms Automatic Dependent
