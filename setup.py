@@ -13,7 +13,7 @@ import sys
 import setuptools
 
 __title__ = 'adsbcot'
-__version__ = '3.0.0b3'
+__version__ = '3.0.0b4'
 __author__ = 'Greg Albrecht W2GMD <oss@undef.net>'
 __copyright__ = 'Copyright 2020 Orion Labs, Inc.'
 __license__ = 'Apache License, Version 2.0'
@@ -29,7 +29,9 @@ def publish():
 
 publish()
 
-
+extras = {
+   'with_simplejson': ['simplejson>=3.5.3']
+}
 setuptools.setup(
     version=__version__,
     name=__title__,
@@ -50,6 +52,9 @@ setuptools.setup(
         'requests',
         'aiohttp'
     ],
+    extras_require={
+        'with_pymodes': 'pymodes==2.8'
+    },
     classifiers=[
         'Topic :: Communications :: Ham Radio',
         'Programming Language :: Python',
