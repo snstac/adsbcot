@@ -3,6 +3,7 @@
 
 """ADS-B Cursor-on-Target Gateway Commands."""
 
+import aiohttp
 import argparse
 import asyncio
 import concurrent
@@ -28,28 +29,37 @@ __license__ = 'Apache License, Version 2.0'
 async def main(opts):
     loop = asyncio.get_running_loop()
     on_con_lost = loop.create_future()
-
-    msg_queue: asyncio.Queue = asyncio.Queue(loop=loop)
-
-    cot_host, cot_port = pytak.split_host(opts.cot_host, opts.cot_port)
-    url: urllib.parse.ParseResult = urllib.parse.urlparse(opts.url)
-
-    client_factory = pytak.AsyncNetworkClient(msg_queue, on_con_lost)
-    transport, protocol = await loop.create_connection(
-        lambda: client_factory, cot_host, cot_port)
-
-    cotworker = pytak.AsyncCoTWorker(msg_queue, transport)
-
     tasks: set = set()
     executor = concurrent.futures.ThreadPoolExecutor(max_workers=8)
+    msg_queue: asyncio.Queue = asyncio.Queue(loop=loop)
+    transport = None
+    send_obj = False
+    net_queue = None
+    url: urllib.parse.ParseResult = urllib.parse.urlparse(opts.url)
 
+    # CoT/TAK Workers (transmitters):
+    if opts.fts_url:
+        fts_url: urllib.parse.ParseResult = urllib.parse.urlparse(opts.fts_url)
+        if 'http' in fts_url.scheme:
+            cotworker = pytak.FTSClient(
+                msg_queue, fts_url.geturl(), opts.fts_token)
+            send_obj = True
+    else:
+        cot_host, cot_port = pytak.split_host(opts.cot_host, opts.cot_port)
+        client_factory = pytak.AsyncNetworkClient(msg_queue, on_con_lost)
+        transport, protocol = await loop.create_connection(
+            lambda: client_factory, cot_host, cot_port)
+        cotworker = pytak.AsyncCoTWorker(msg_queue, transport)
+
+    # ADSB Workers (receivers):
     if 'http' in url.scheme:
         adsbworker = adsbcot.ADSBWorker(
             msg_queue=msg_queue,
             url=url,
             interval=opts.interval,
             stale=opts.stale,
-            api_key=opts.adsbx_api_key
+            api_key=opts.adsbx_api_key,
+            send_obj=send_obj
         )
         tasks.add(asyncio.ensure_future(adsbworker.run()))
     elif 'tcp' in url.scheme:
@@ -58,10 +68,9 @@ async def main(opts):
             print('Please reinstall adsbcot with pyModeS support: ')
             print('$ pip install -U adsbcot[with_pymodes]')
             print('Exiting...')
-            return False
+            raise Exception
 
         net_queue: asyncio.Queue = asyncio.Queue(loop=loop)
-        tasks.add(asyncio.ensure_future(net_queue.join()))
 
         adsbnetreceiver = adsbcot.ADSBNetReceiver(net_queue, url)
         tasks.add(asyncio.ensure_future(adsbnetreceiver.run()))
@@ -77,16 +86,19 @@ async def main(opts):
             msg_queue=msg_queue,
             net_queue=net_queue,
             data_type=data_type,
-            stale=opts.stale
+            stale=opts.stale,
+            send_obj=send_obj
         )
         tasks.add(asyncio.ensure_future(adsbnetworker.run()))
 
     tasks.add(asyncio.ensure_future(cotworker.run()))
-    tasks.add(await on_con_lost)
-    tasks.add(asyncio.ensure_future(msg_queue.join()))
+    if transport:
+        tasks.add(await on_con_lost)
+    #if net_queue:
+    #    tasks.add(asyncio.ensure_future(net_queue.join()))
+    #tasks.add(asyncio.ensure_future(msg_queue.join()))
 
-    done, pending = loop.run_until_complete(
-        await asyncio.wait(tasks, return_when=asyncio.FIRST_COMPLETED))
+    done, pending = await asyncio.wait(tasks, return_when=asyncio.FIRST_COMPLETED)
 
     for task in done:
         print(f"Task completed: {task}")
@@ -98,8 +110,7 @@ def cli():
     parser = argparse.ArgumentParser()
 
     parser.add_argument(
-        '-C', '--cot_host', help='CoT Destination Host (or Host:Port)',
-        required=True
+        '-C', '--cot_host', help='CoT Destination Host (or Host:Port, or URL)'
     )
     parser.add_argument(
         '-P', '--cot_port', help='CoT Destination Port'
@@ -123,9 +134,22 @@ def cli():
     parser.add_argument(
         '-X', '--adsbx_api_key', help='ADS-B Exchange API Key',
     )
+
+    parser.add_argument(
+        '-F', '--fts_url', help='FTS REST API URL'
+    )
+    parser.add_argument(
+        '-K', '--fts_token', help='FTS REST API Token'
+    )
     opts = parser.parse_args()
 
-    asyncio.run(main(opts), debug=bool(os.environ.get('DEBUG')))
+    loop = asyncio.get_event_loop()
+    try:
+        loop.run_until_complete(main(opts)) #, debug=bool(os.environ.get('DEBUG')))
+    finally:
+        loop.close()
+
+    # asyncio.run(main(opts), debug=bool(os.environ.get('DEBUG')))
 
 
 if __name__ == '__main__':

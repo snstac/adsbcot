@@ -88,32 +88,27 @@ Troubleshooting
 
 To report bugs, please set the DEBUG=1 environment variable to collect logs.
 
-Build Status
-============
+Unit Test/Build Status
+======================
 
-Master:
+adsbcot's current unit test and build status is available via Travis CI:
 
 .. image:: https://travis-ci.com/ampledata/adsbcot.svg?branch=master
     :target: https://travis-ci.com/ampledata/adsbcot
 
-Develop:
-
-.. image:: https://travis-ci.com/ampledata/adsbcot.svg?branch=develop
-    :target: https://travis-ci.com/ampledata/adsbcot
-
 Source
 ======
-Github: https://github.com/ampledata/adsbcot
+The source for adsbcot can be found on Github: https://github.com/ampledata/adsbcot
 
 Author
 ======
-Greg Albrecht W2GMD oss@undef.net
+adsbcot is written and maintained by Greg Albrecht W2GMD oss@undef.net
 
 https://ampledata.org/
 
 Copyright
 =========
-Copyright 2020 Orion Labs, Inc.
+adsbcot is Copyright 2020 Orion Labs, Inc. https://www.orionlabs.io
 
 `pyModeS <https://github.com/junzis/pyModeS>`_ is an optional extra package,
 and is Copyright (C) 2015 Junzi Sun (TU Delft).

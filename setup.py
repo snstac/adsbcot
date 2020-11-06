@@ -13,7 +13,7 @@ import sys
 import setuptools
 
 __title__ = 'adsbcot'
-__version__ = '3.0.0b4'
+__version__ = '3.0.0b5'
 __author__ = 'Greg Albrecht W2GMD <oss@undef.net>'
 __copyright__ = 'Copyright 2020 Orion Labs, Inc.'
 __license__ = 'Apache License, Version 2.0'
@@ -50,7 +50,8 @@ setuptools.setup(
         'pycot >= 2.5.0',
         'pytak >= 2.1.0',
         'requests',
-        'aiohttp'
+        'aiohttp',
+        'websockets'
     ],
     extras_require={
         'with_pymodes': 'pymodes==2.8'
