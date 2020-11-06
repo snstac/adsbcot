@@ -8,6 +8,7 @@ import argparse
 import asyncio
 import concurrent
 import os
+import sys
 import urllib
 
 import pytak
@@ -21,13 +22,18 @@ try:
 except ImportError:
     pass
 
+if sys.version_info[:2] >= (3, 7):
+    from asyncio import get_running_loop
+else:
+    from asyncio import _get_running_loop as get_running_loop
+
 __author__ = 'Greg Albrecht W2GMD <oss@undef.net>'
 __copyright__ = 'Copyright 2020 Orion Labs, Inc.'
 __license__ = 'Apache License, Version 2.0'
 
 
 async def main(opts):
-    loop = asyncio.get_running_loop()
+    loop = get_running_loop()
     on_con_lost = loop.create_future()
     tasks: set = set()
     executor = concurrent.futures.ThreadPoolExecutor(max_workers=8)
@@ -62,6 +68,13 @@ async def main(opts):
             send_obj=send_obj
         )
         tasks.add(asyncio.ensure_future(adsbworker.run()))
+    elif 'ws' in url.scheme:
+        adsbworker = adsbcot.StratuxWorker(
+            msg_queue=msg_queue,
+            url=url,
+            stale=opts.stale,
+            send_obj=send_obj
+        )
     elif 'tcp' in url.scheme:
         if not with_pymodes:
             print('ERROR from adsbcot')

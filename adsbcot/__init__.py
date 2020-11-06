@@ -19,7 +19,7 @@ from .constants import (LOG_FORMAT, LOG_LEVEL, DEFAULT_COT_PORT,  # NOQA
                         DEFAULT_INTERVAL, DEFAULT_STALE, DEFAULT_TYPE,
                         DEFAULT_DUMP1090_TCP_PORT)
 
-from .functions import adsb_to_cot, hello_event  # NOQA
+from .functions import adsb_to_cot, hello_event, stratux_to_cot  # NOQA
 
 from .classes import ADSBWorker, ADSBNetReceiver, ADSBNetWorker  # NOQA
 

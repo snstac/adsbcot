@@ -326,48 +326,43 @@ class StratuxWorker:
         _logger.propagate = False
     logging.getLogger('asyncio').setLevel(adsbcot.LOG_LEVEL)
 
-    def __init__(self, msg_queue, url):
+    def __init__(self, msg_queue, url, stale, send_obj: bool = False):
         self.msg_queue = msg_queue
         self.url = url
+        self.stale = stale
+        self.send_obj = send_obj
 
-    async def _put_msg_queue(self, aircraft: list) -> None:
-        if not aircraft:
-            self._logger.warning('Empty aircraft list')
+    async def _put_msg_queue(self, msg: dict) -> None:
+        cot_event = adsbcot.stratux_to_cot(msg, stale=self.stale)
+        if not cot_event:
+            self._logger.debug(f'Empty CoT Event for craft={msg}')
             return
 
-        i = 1
-        for craft in aircraft:
+        self._logger.debug(
+            'Handling ICAO24: %s Flight: %s ',
+            msg.get('Icao_addr'), msg.get('Flight'))
 
-            cot_event = adsbcot.adsb_to_cot(craft, stale=self.stale)
-            self._logger.debug("craft: %s", craft)
-            if not cot_event:
-                self._logger.debug(f'Empty CoT Event for craft={craft}')
-                i += 1
-                continue
+        if self._send_obj:
+            send_event = cot_event
+        else:
+            send_event = cot_event.render(
+                encoding='UTF-8', standalone=True)
 
-            self._logger.debug(
-                'Handling %s/%s ICAO24: %s Flight: %s ',
-                i, len(aircraft), craft.get('hex'), craft.get('flight'))
+        if send_event:
+            try:
+                await self.msg_queue.put(send_event)
+            except queue.Full as exc:
+                self._logger.exception(exc)
+                self._logger.warning(
+                    'Lost CoT Event (queue full): "%s"', send_event)
 
-            if self._send_obj:
-                send_event = cot_event
-            else:
-                send_event = cot_event.render(
-                    encoding='UTF-8', standalone=True)
+    async def run(self):
+        self._logger.info(
+            "Running StratuxWorker for URL=%s", self.url.geturl())
 
-            if send_event:
-                try:
-                    await self.msg_queue.put(send_event)
-                except queue.Full as exc:
-                    self._logger.exception(exc)
-                    self._logger.warning(
-                        'Lost CoT Event (queue full): "%s"', send_event)
-            i += 1
-
-    async def ws_client(self):
         async with websockets.connect(self.url) as websocket:
             while 1:
                 event = await websocket.recv()
                 if event:
                     j_event = json.loads(event)
-                    print(j_event)
+                    await self._put_msg_queue(j_event)
