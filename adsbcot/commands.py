@@ -22,6 +22,7 @@ try:
 except ImportError:
     pass
 
+# Python 3.6 support:
 if sys.version_info[:2] >= (3, 7):
     from asyncio import get_running_loop
 else:
@@ -34,48 +35,35 @@ __license__ = 'Apache License, Version 2.0'
 
 async def main(opts):
     loop = get_running_loop()
-    on_con_lost = loop.create_future()
-    tasks: set = set()
-    executor = concurrent.futures.ThreadPoolExecutor(max_workers=8)
-    msg_queue: asyncio.Queue = asyncio.Queue(loop=loop)
-    transport = None
-    send_obj = False
-    net_queue = None
-    url: urllib.parse.ParseResult = urllib.parse.urlparse(opts.url)
 
-    # CoT/TAK Workers (transmitters):
-    if opts.fts_url:
-        fts_url: urllib.parse.ParseResult = urllib.parse.urlparse(opts.fts_url)
-        if 'http' in fts_url.scheme:
-            cotworker = pytak.FTSClient(
-                msg_queue, fts_url.geturl(), opts.fts_token)
-            send_obj = True
-    else:
-        cot_host, cot_port = pytak.split_host(opts.cot_host, opts.cot_port)
-        client_factory = pytak.AsyncNetworkClient(msg_queue, on_con_lost)
-        transport, protocol = await loop.create_connection(
-            lambda: client_factory, cot_host, cot_port)
-        cotworker = pytak.AsyncCoTWorker(msg_queue, transport)
+    tasks: set = set()
+    event_queue: asyncio.Queue = asyncio.Queue(loop=loop)
+
+    cot_url: urllib.parse.ParseResult = urllib.parse.urlparse(opts.cot_url)
+    adsb_url: urllib.parse.ParseResult = urllib.parse.urlparse(opts.adsb_url)
+
+    # CoT/TAK Event Workers (transmitters):
+    if "http" in cot_url.scheme:
+        eventworker = pytak.FTSClient(
+            event_queue, cot_url.geturl(), opts.fts_token)
+    elif "tcp" in cot_url.scheme:
+        host, port = pytak.parse_cot_url(cot_url)
+        _, writer = await asyncio.open_connection(host, port)
+        eventworker = pytak.EventWorker(event_queue, writer)
+    elif "udp" in cot_url.scheme:
+        writer = await pytak.udp_client(cot_url)
+        eventworker = pytak.EventWorker(event_queue, writer)
 
     # ADSB Workers (receivers):
-    if 'http' in url.scheme:
+    if "http" in adsb_url.scheme:
         adsbworker = adsbcot.ADSBWorker(
-            msg_queue=msg_queue,
-            url=url,
-            interval=opts.interval,
-            stale=opts.stale,
+            event_queue=event_queue,
+            url=adsb_url,
+            poll_interval=opts.poll_interval,
+            cot_stale=opts.cot_stale,
             api_key=opts.adsbx_api_key,
-            send_obj=send_obj
         )
-        tasks.add(asyncio.ensure_future(adsbworker.run()))
-    elif 'ws' in url.scheme:
-        adsbworker = adsbcot.StratuxWorker(
-            msg_queue=msg_queue,
-            url=url,
-            stale=opts.stale,
-            send_obj=send_obj
-        )
-    elif 'tcp' in url.scheme:
+    elif "tcp" in adsb_url.scheme:
         if not with_pymodes:
             print('ERROR from adsbcot')
             print('Please reinstall adsbcot with pyModeS support: ')
@@ -99,19 +87,15 @@ async def main(opts):
             msg_queue=msg_queue,
             net_queue=net_queue,
             data_type=data_type,
-            stale=opts.stale,
-            send_obj=send_obj
+            cot_stale=opts.cot_stale
         )
         tasks.add(asyncio.ensure_future(adsbnetworker.run()))
 
-    tasks.add(asyncio.ensure_future(cotworker.run()))
-    if transport:
-        tasks.add(await on_con_lost)
-    #if net_queue:
-    #    tasks.add(asyncio.ensure_future(net_queue.join()))
-    #tasks.add(asyncio.ensure_future(msg_queue.join()))
+    tasks.add(asyncio.ensure_future(adsbworker.run()))
+    tasks.add(asyncio.ensure_future(eventworker.run()))
 
-    done, pending = await asyncio.wait(tasks, return_when=asyncio.FIRST_COMPLETED)
+    done, pending = await asyncio.wait(
+        tasks, return_when=asyncio.FIRST_COMPLETED)
 
     for task in done:
         print(f"Task completed: {task}")
@@ -123,46 +107,37 @@ def cli():
     parser = argparse.ArgumentParser()
 
     parser.add_argument(
-        '-C', '--cot_host', help='CoT Destination Host (or Host:Port, or URL)'
+        '-U', '--cot_url', help='URL to CoT Destination.',
+        required=True
     )
     parser.add_argument(
-        '-P', '--cot_port', help='CoT Destination Port'
-    )
-    #parser.add_argument(
-    #    '-B', '--broadcast', help='UDP Broadcast CoT?',
-    #    action='store_true'
-    #)
-    parser.add_argument(
-        '-S', '--stale', help='CoT Stale period, in seconds',
+        '-A', '--adsb_url', help='URL to ADS-B Source.',
+        required=True
     )
 
     parser.add_argument(
-        '-I', '--interval', help='For HTTP: Polling Interval',
-    )
-
-    parser.add_argument(
-        '-U', '--url', help='ADS-B Source URL.',
-    )
-
-    parser.add_argument(
-        '-X', '--adsbx_api_key', help='ADS-B Exchange API Key',
-    )
-
-    parser.add_argument(
-        '-F', '--fts_url', help='FTS REST API URL'
+        '-S', '--cot_stale', help='CoT Stale period, in seconds',
     )
     parser.add_argument(
         '-K', '--fts_token', help='FTS REST API Token'
     )
+
+    parser.add_argument(
+        '-I', '--poll_interval', help='For HTTP: Polling Interval',
+    )
+    parser.add_argument(
+        '-X', '--adsbx_api_key', help='ADS-B Exchange API Key',
+    )
     opts = parser.parse_args()
 
-    loop = asyncio.get_event_loop()
-    try:
-        loop.run_until_complete(main(opts)) #, debug=bool(os.environ.get('DEBUG')))
-    finally:
-        loop.close()
-
-    # asyncio.run(main(opts), debug=bool(os.environ.get('DEBUG')))
+    if sys.version_info[:2] >= (3, 7):
+        asyncio.run(main(opts), debug=bool(os.environ.get('DEBUG')))
+    else:
+        loop = asyncio.get_event_loop()
+        try:
+            loop.run_until_complete(main(opts))
+        finally:
+            loop.close()
 
 
 if __name__ == '__main__':

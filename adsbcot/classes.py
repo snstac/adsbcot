@@ -18,7 +18,7 @@ import time
 import urllib
 import websockets
 
-import pycot
+import pytak
 import requests
 
 import adsbcot
@@ -38,60 +38,34 @@ __copyright__ = 'Copyright 2020 Orion Labs, Inc.'
 __license__ = 'Apache License, Version 2.0'
 
 
-class ADSBWorker:
+class ADSBWorker(pytak.MessageWorker):
 
     """Reads ADS-B Data from inputs, renders to CoT, and puts on queue."""
 
-    _logger = logging.getLogger(__name__)
-    if not _logger.handlers:
-        _logger.setLevel(adsbcot.LOG_LEVEL)
-        _console_handler = logging.StreamHandler()
-        _console_handler.setLevel(adsbcot.LOG_LEVEL)
-        _console_handler.setFormatter(adsbcot.LOG_FORMAT)
-        _logger.addHandler(_console_handler)
-        _logger.propagate = False
-    logging.getLogger('asyncio').setLevel(adsbcot.LOG_LEVEL)
-
-    def __init__(self, msg_queue: asyncio.Queue, url: urllib.parse.ParseResult,
-                 interval: int = None, stale: int = None, api_key: str = None,
-                 send_obj: bool = False):
-        self.msg_queue = msg_queue
-        self.url: urllib.parse.ParseResult = url
-        self.interval: int = int(interval or adsbcot.DEFAULT_INTERVAL)
-        self.stale: int = stale
+    def __init__(self, event_queue, url, cot_stale, poll_interval: int = None,
+                 api_key: str = None):
+        super().__init__(event_queue, url, cot_stale)
+        self.poll_interval: int = int(poll_interval or adsbcot.DEFAULT_POLL_INTERVAL)
         self.api_key: str = api_key
-        self._send_obj: bool = send_obj
 
-    async def _put_msg_queue(self, aircraft: list) -> None:
+    async def handle_message(self, aircraft: list) -> None:
         if not aircraft:
             self._logger.warning('Empty aircraft list')
             return False
 
         i = 1
         for craft in aircraft:
-            cot_event = adsbcot.adsb_to_cot(craft, stale=self.stale)
-            if not cot_event:
+            event = adsbcot.adsb_to_cot(craft, stale=self.cot_stale)
+            if not event:
                 self._logger.debug(f'Empty CoT Event for craft={craft}')
                 i += 1
                 continue
 
             self._logger.debug(
-                'Handling %s/%s ICAO24: %s Flight: %s ',
-                i, len(aircraft), craft.get('hex'), craft.get('flight'))
-
-            if self._send_obj:
-                send_event = cot_event
-            else:
-                send_event = cot_event.render(
-                    encoding='UTF-8', standalone=True)
-
-            if send_event:
-                try:
-                    await self.msg_queue.put(send_event)
-                except queue.Full as exc:
-                    self._logger.exception(exc)
-                    self._logger.warning(
-                        'Lost CoT Event (queue full): "%s"', send_event)
+                'Handling %s/%s ICAO: %s Flight: %s Category: %s',
+                i, len(aircraft), craft.get('hex'), craft.get('flight'),
+                craft.get('category'))
+            await self._put_event_queue(event)
             i += 1
 
     async def _get_dump1090_feed(self):
@@ -101,7 +75,7 @@ class ADSBWorker:
             json_resp = await resp.json()
             aircraft = json_resp.get('aircraft')
             self._logger.debug('Retrieved %s aircraft', len(aircraft))
-            await self._put_msg_queue(aircraft)
+            await self.handle_message(aircraft)
 
     async def _get_adsbx_feed(self) -> None:
         headers = {'api-auth': self.api_key}
@@ -109,19 +83,13 @@ class ADSBWorker:
         jresponse = json.loads(response.text)
         aircraft = jresponse.get('ac')
         self._logger.debug('Retrieved %s aircraft', len(aircraft))
-        await self._put_msg_queue(aircraft)
+        await self.handle_message(aircraft)
 
     async def run(self):
         """Runs this Thread, Reads from Pollers."""
         self._logger.info("Running ADSBWorker with URL '%s'", self.url.geturl())
 
-        hello_event = adsbcot.hello_event()
-        if self._send_obj:
-            await self.msg_queue.put(hello_event)
-        else:
-            await self.msg_queue.put(hello_event.render(encoding='UTF-8', standalone=True))
-
-        if 'aircraft.json' in self.url.path:
+        if "aircraft.json" in self.url.path:
             feed_func = self._get_dump1090_feed
         else:
             feed_func = self._get_adsbx_feed
@@ -129,7 +97,7 @@ class ADSBWorker:
         self._logger.debug("url=%s feed_func=%s", self.url, feed_func)
         while 1:
             await feed_func()
-            await asyncio.sleep(self.interval)
+            await asyncio.sleep(self.poll_interval)
 
 
 class ADSBNetReceiver:
@@ -201,8 +169,9 @@ class ADSBNetWorker:
                 continue
 
             self._logger.debug(
-                'Handling %s/%s ICAO24: %s Flight: %s ',
-                i, len(aircraft), craft.get('hex'), craft.get('flight'))
+                'Handling %s/%s ICAO: %s Flight: %s Category: %s',
+                i, len(aircraft), craft.get('hex'), craft.get('flight'),
+                craft.get('category'))
 
             if self._send_obj:
                 send_event = cot_event
@@ -312,57 +281,3 @@ class ADSBNetWorker:
                         await self._put_msg_queue(aircraft)
                     else:
                         continue
-
-
-class StratuxWorker:
-
-    _logger = logging.getLogger(__name__)
-    if not _logger.handlers:
-        _logger.setLevel(adsbcot.LOG_LEVEL)
-        _console_handler = logging.StreamHandler()
-        _console_handler.setLevel(adsbcot.LOG_LEVEL)
-        _console_handler.setFormatter(adsbcot.LOG_FORMAT)
-        _logger.addHandler(_console_handler)
-        _logger.propagate = False
-    logging.getLogger('asyncio').setLevel(adsbcot.LOG_LEVEL)
-
-    def __init__(self, msg_queue, url, stale, send_obj: bool = False):
-        self.msg_queue = msg_queue
-        self.url = url
-        self.stale = stale
-        self.send_obj = send_obj
-
-    async def _put_msg_queue(self, msg: dict) -> None:
-        cot_event = adsbcot.stratux_to_cot(msg, stale=self.stale)
-        if not cot_event:
-            self._logger.debug(f'Empty CoT Event for craft={msg}')
-            return
-
-        self._logger.debug(
-            'Handling ICAO24: %s Flight: %s ',
-            msg.get('Icao_addr'), msg.get('Flight'))
-
-        if self._send_obj:
-            send_event = cot_event
-        else:
-            send_event = cot_event.render(
-                encoding='UTF-8', standalone=True)
-
-        if send_event:
-            try:
-                await self.msg_queue.put(send_event)
-            except queue.Full as exc:
-                self._logger.exception(exc)
-                self._logger.warning(
-                    'Lost CoT Event (queue full): "%s"', send_event)
-
-    async def run(self):
-        self._logger.info(
-            "Running StratuxWorker for URL=%s", self.url.geturl())
-
-        async with websockets.connect(self.url) as websocket:
-            while 1:
-                event = await websocket.recv()
-                if event:
-                    j_event = json.loads(event)
-                    await self._put_msg_queue(j_event)

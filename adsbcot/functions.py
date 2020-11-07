@@ -6,6 +6,7 @@
 import datetime
 
 import pycot
+import pytak
 
 import adsbcot.constants
 
@@ -20,7 +21,6 @@ def adsb_to_cot(craft: dict, cot_type: str = None, # NOQA pylint: disable=too-ma
     Transforms a Dump1090 ADS-B Aircraft Object to a Cursor-on-Target PLI.
     """
     time = datetime.datetime.now(datetime.timezone.utc)
-    cot_type = cot_type or adsbcot.constants.DEFAULT_TYPE
     stale = stale or adsbcot.constants.DEFAULT_STALE
 
     lat = craft.get('lat')
@@ -29,19 +29,21 @@ def adsb_to_cot(craft: dict, cot_type: str = None, # NOQA pylint: disable=too-ma
     if lat is None or lon is None:
         return None
 
-    c_hex = craft.get('hex')
-    name = f"ICAO24.{c_hex}"
+    icao_hex = craft.get('hex').upper()
+    name = f"ICAO-{icao_hex}"
     flight = craft.get('flight', '').strip()
     if flight:
         callsign = flight
     else:
-        callsign = c_hex
+        callsign = icao_hex
+
+    cot_type = pytak.faa_to_cot_type(0, flight, craft.get('hex'))
 
     point = pycot.Point()
     point.lat = lat
     point.lon = lon
-    point.ce = '9999999.0'
-    point.le = '9999999.0'
+    point.ce = craft.get('nac_p', '9999999.0')
+    point.le = craft.get('nac_v', '9999999.0')
 
     # alt_geom: geometric (GNSS / INS) altitude in feet referenced to the
     #           WGS84 ellipsoid
@@ -71,7 +73,7 @@ def adsb_to_cot(craft: dict, cot_type: str = None, # NOQA pylint: disable=too-ma
         track.speed = '9999999.0'
 
     remarks = pycot.Remarks()
-    _remark = (f"ICAO24: {c_hex} Squawk: {craft.get('squawk')} "
+    _remark = (f"ICAO24: {icao_hex} Squawk: {craft.get('squawk')} "
                f"RSSI: {craft.get('rssi')}")
     if flight:
         remarks.value = f"Flight: {flight} " + _remark
@@ -92,7 +94,7 @@ def adsb_to_cot(craft: dict, cot_type: str = None, # NOQA pylint: disable=too-ma
     event.time = time
     event.start = time
     event.stale = time + datetime.timedelta(seconds=stale)
-    event.how = 'm-g'
+    event.how = "m-g"
     event.point = point
     event.detail = detail
 
@@ -131,132 +133,6 @@ def hello_event():
     event.start = time
     event.stale = time + datetime.timedelta(hours=1)
     event.how = 'h-g-i-g-o'
-    event.point = point
-    event.detail = detail
-
-    return event
-
-#
-#
-# {
-#  'Icao_addr': 11160165,
-#  'Reg': 'N762QS',
-#  'Tail': 'N762QS',
-#  'Squawk': 0,
-#  'Lat': 37.89692,
-#  'Lng': -122.74547,
-#  'Addr_type': 0,
-#  'Age': 28.29,
-#  'AgeLastAlt': 1.33,
-#  'Alt': 21850,
-#  'AltIsGNSS': False,
-#  'Bearing': 0,
-#  'BearingDist_valid': False,
-#  'Distance': 0,
-#  'Emitter_category': 0,
-#  'ExtrapolatedPosition': False,
-#  'GnssDiffFromBaroAlt': -275,
-#  'LastSent': '0001-01-01T00:39:16.44Z',
-#  'Last_GnssDiff': '0001-01-01T00:39:53.84Z',
-#  'Last_GnssDiffAlt': 21775,
-#  'Last_alt': '0001-01-01T00:39:54.77Z',
-#  'Last_seen': '0001-01-01T00:39:54.77Z',
-#  'Last_source': 1,
-#  'Last_speed': '0001-01-01T00:39:53.84Z',
-#  'NACp': 10,
-#  'NIC': 8,
-#  'OnGround': False,
-#  'Position_valid': True,
-#  'PriorityStatus': 0,
-#  'SignalLevel': -28.21023052706831,
-#  'Speed': 340,
-#  'Speed_valid': True,
-#  'TargetType': 1,
-#  'Timestamp': '2020-11-06T19:58:06.234Z',
-#  'Track': 249,
-#  'Vvel': 3392
-#  }
-#
-
-def stratux_to_cot(msg: dict, cot_type: str = None, # NOQA pylint: disable=too-many-locals
-                   stale: int = None) -> pycot.Event:
-    """
-    Transforms a Dump1090 ADS-B Aircraft Object to a Cursor-on-Target PLI.
-    """
-    time = datetime.datetime.now(datetime.timezone.utc)
-    cot_type = cot_type or adsbcot.constants.DEFAULT_TYPE
-    stale = stale or adsbcot.constants.DEFAULT_STALE
-
-    lat = msg.get('Lat')
-    lon = msg.get('Lon')
-
-    if lat is None or lon is None:
-        return None
-
-    c_hex = hex(msg.get('Icao_addr'))
-    name = f"ICAO24.{c_hex}"
-    flight = msg.get('Tail', '').strip()
-    if flight:
-        callsign = flight
-    else:
-        callsign = c_hex
-
-    point = pycot.Point()
-    point.lat = lat
-    point.lon = lon
-    point.ce = '9999999.0'
-    point.le = '9999999.0'
-
-    # alt_geom: geometric (GNSS / INS) altitude in feet referenced to the
-    #           WGS84 ellipsoid
-    alt_geom = int(msg.get('Alt', 0))
-    if alt_geom:
-        point.hae = alt_geom * 0.3048
-    else:
-        point.hae = '9999999.0'
-
-    uid = pycot.UID()
-    uid.Droid = name
-
-    contact = pycot.Contact()
-    contact.callsign = callsign
-    # Not supported by FTS 1.1?
-    # if flight:
-    #    contact.hostname = f'https://flightaware.com/live/flight/{flight}'
-
-    track = pycot.Track()
-    track.course = msg.get('Track', '9999999.0')
-
-    # gs: ground speed in knots
-    gs = int(msg.get('Speed', 0))
-    if gs:
-        track.speed = gs * 0.514444
-    else:
-        track.speed = '9999999.0'
-
-    remarks = pycot.Remarks()
-    _remark = (f"ICAO24: {c_hex} Squawk: {msg.get('Squawk')} "
-               f"SignalLevel: {msg.get('SignalLevel')}")
-    if flight:
-        remarks.value = f"Flight: {flight} " + _remark
-    else:
-        remarks.value = _remark
-
-    detail = pycot.Detail()
-    detail.uid = uid
-    detail.contact = contact
-    detail.track = track
-    # Not supported by FTS 1.1?
-    # detail.remarks = remarks
-
-    event = pycot.Event()
-    event.version = '2.0'
-    event.event_type = cot_type
-    event.uid = name
-    event.time = time
-    event.start = time
-    event.stale = time + datetime.timedelta(seconds=stale)
-    event.how = 'm-g'
     event.point = point
     event.detail = detail
 
