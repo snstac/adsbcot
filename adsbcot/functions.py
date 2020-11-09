@@ -37,7 +37,7 @@ def adsb_to_cot(craft: dict, cot_type: str = None, # NOQA pylint: disable=too-ma
     else:
         callsign = icao_hex
 
-    cot_type = pytak.faa_to_cot_type(0, flight, craft.get('hex'))
+    cot_type = pytak.faa_to_cot_type(craft.get('hex'), None, flight)
 
     point = pycot.Point()
     point.lat = lat
