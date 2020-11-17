@@ -55,23 +55,21 @@ Usage
 
 The `adsbcot` command-line program has several runtime arguments::
 
-     usage: adsbcot [-h] -C COT_HOST [-P COT_PORT] [-S STALE] [-I INTERVAL]
-                   [-U URL] [-X ADSBX_API_KEY]
+    usage: adsbcot [-h] -U COT_URL [-S COT_STALE] [-K FTS_TOKEN] -D DUMP1090_URL
+                   [-I POLL_INTERVAL]
 
-      optional arguments:
-        -h, --help            show this help message and exit
-        -C COT_HOST, --cot_host COT_HOST
-                              CoT Destination Host (or Host:Port)
-        -P COT_PORT, --cot_port COT_PORT
-                              CoT Destination Port
-        -S STALE, --stale STALE
-                              CoT Stale period, in seconds
-        -I INTERVAL, --interval INTERVAL
-                              For HTTP: Polling Interval
-        -U URL, --url URL     ADS-B Source URL.
-        -X ADSBX_API_KEY, --adsbx_api_key ADSBX_API_KEY
-                              ADS-B Exchange API Key
-
+    optional arguments:
+      -h, --help            show this help message and exit
+      -U COT_URL, --cot_url COT_URL
+                            URL to CoT Destination.
+      -S COT_STALE, --cot_stale COT_STALE
+                            CoT Stale period, in seconds
+      -K FTS_TOKEN, --fts_token FTS_TOKEN
+                            FTS REST API Token
+      -D DUMP1090_URL, --dump1090_url DUMP1090_URL
+                            URL to dump1090 JSON API.
+      -I POLL_INTERVAL, --poll_interval POLL_INTERVAL
+                            For HTTP: Polling Interval
 
 Troubleshooting
 ===============
@@ -83,7 +81,7 @@ Unit Test/Build Status
 
 adsbcot's current unit test and build status is available via Travis CI:
 
-.. image:: https://travis-ci.com/ampledata/adsbcot.svg?branch=master
+.. image:: https://travis-ci.com/ampledata/adsbcot.svg?branch=main
     :target: https://travis-ci.com/ampledata/adsbcot
 
 Source
@@ -115,25 +113,19 @@ Examples
 Connect to dump1090's Beast TCP running on host 172.17.2.122, port 30005 &
 forward CoT to host 172.17.2.152, port 8087::
 
-    $ adsbcot -C 172.17.2.152:8087 -U tcp+beast:172.17.2.122:30005
+    $ adsbcot -U 172.17.2.152:8087 -D tcp+beast:172.17.2.122:30005
 
 
-Connect to dump1090's Raw TCP running on host 172.17.2.122, port 30003 &
+Connect to dump1090's Raw TCP running on host 172.17.2.122, port 30002 &
 forward CoT to host 172.17.2.152, port 8087::
 
-    $ adsbcot -C 172.17.2.152:8087 -U tcp+raw:172.17.2.122:30003
+    $ adsbcot -U 172.17.2.152:8087 -D tcp+raw:172.17.2.122:30002
 
 
 Poll dump1090's JSON API at http://172.17.2.122:8080/data/aircraft.json with a
 10 second interval & forward CoT to host 172.17.2.152, port 8087::
 
-    $ adsbcot -C 172.17.2.152:8087 -U http://172.17.2.122:8080/data/aircraft.json -I 10
-
-Poll ADS-B Exchange's API every 5 seconds & forward CoT to host 127.0.0.1, port
-8087::
-
-    $ adsbcot -U https://adsbexchange.com/api/aircraft/v2/lat/36.7783/lon/-119.4179/dist/400/ -X SECRET_API_KEY -I 5 -C 127.0.0.1 -P 8087
-
+    $ adsbcot -U 172.17.2.152:8087 -D http://172.17.2.122:8080/data/aircraft.json -I 10
 
 Running as a Daemon
 ===================

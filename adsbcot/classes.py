@@ -170,7 +170,7 @@ class ADSBNetWorker(ADSBWorker):
 
                 acs = decoder.get_aircraft()
                 for k, v in acs.items():
-                    self._logger.debug("acs=%s", acs[k])
+                    # self._logger.debug("acs=%s", acs[k])
                     lat = v.get("lat")
                     lon = v.get("lon")
                     flight = v.get("call", k)
@@ -225,7 +225,15 @@ class ADSBNetReceiver:
                 raise Exception("Invalid data_type='%s'" % self.data_type)
 
         self._logger.debug("host=%s port=%s", host, port)
+
         reader, writer = await asyncio.open_connection(host, port)
-        while 1:
-            received = await reader.read(4096)
-            self.net_queue.put_nowait(received)
+
+        if self.data_type == "raw":
+            while 1:
+                received = await reader.readline()
+                self.net_queue.put_nowait(received)
+        elif self.data_type == "beast":
+            while 1:
+                received = await reader.read(4096)
+                self.net_queue.put_nowait(received)
+
