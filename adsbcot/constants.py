@@ -22,8 +22,7 @@ else:
     LOG_FORMAT = logging.Formatter(
         ('%(asctime)s adsbcot %(levelname)s - %(message)s'))
 
-DEFAULT_COT_PORT: int = 8087
-DEFAULT_INTERVAL: int = 30
-DEFAULT_STALE: int = 120
-DEFAULT_TYPE: str = 'a-n-A-C-F'
-DEFAULT_DUMP1090_TCP_PORT: str = 30003
+DEFAULT_POLL_INTERVAL: int = 30
+DEFAULT_COT_STALE: int = 120
+DEFAULT_DUMP1090_TCP_RAW_PORT: str = 30003
+DEFAULT_DUMP1090_TCP_BEAST_PORT: str = 30005

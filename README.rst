@@ -5,27 +5,23 @@ adsbcot - ADSB Cursor-on-Target Gateway.
    :alt: Screenshot of ADS-B PLI in ATAK.
    :target: https://github.com/ampledata/adsbcot/blob/main/docs/screenshot-1604561447.png
 
-
 The adsbcot ADS-B Cursor on Target Gateway transforms Automatic Dependent
 Surveillance-Broadcast (ADS-B) aircraft position information into Cursor on
 Target (CoT) Position Location Information (PLI) for display on Situational
 Awareness (SA) applications such as the Android Team Awareness Kit (ATAK),
 WinTAK, RaptorX, et al.
 
-ADS-B data can be read from various sources, including:
+**IF YOU HAVE AN URGENT OPERATIONAL NEED**: Email ops@undef.net or call/sms +1-415-598-8226
 
-1. dump1090 Aircraft JSON HTTP feed, see: https://github.com/flightaware/dump1090/blob/master/README-json.md
-2. dump1090 Raw & Beast TCP.
-3. ADSBExchange API call: https://www.adsbexchange.com/data/
-4. [COMING SOON] StratuX WebSockets.
-5. [COMING SOON] GDL90
+ADS-B Data can be recevied from a dump1090 recevier using:
+1. Aircraft JSON HTTP feed. See: https://github.com/flightaware/dump1090/blob/master/README-json.md
+2. Raw TCP (via `pyModeS <https://github.com/junzis/pyModeS>`_)
+3. Beast TCP (via `pyModeS <https://github.com/junzis/pyModeS>`_)
 
-CoT PLIs can be transmitted to SA clients using:
+If you'd like to feed AIS data from another source, consider these:
 
-A. TCP Unicast to a specified host:port.
-B. [COMING SOON] UDP Broadcast to a specified broadcast host:port or multicast host:port.
-
-For more information on the TAK suite of tools, see: https://www.civtak.org/
+* `adsbxcot <https://github.com/ampledata/adsbxcot>`_: ADS-B Exchange to Cursor on Target (CoT) Gateway. Transforms ADS-B position messages to CoT PLI Events.
+* `stratuxcot <https://github.com/ampledata/stratuxcot>`_: Stratux ADS-B to Cursor on Target (CoT) Gateway. Transforms position messages to CoT PLI Events.
 
 Installation
 ============
@@ -76,12 +72,6 @@ The `adsbcot` command-line program has several runtime arguments::
         -X ADSBX_API_KEY, --adsbx_api_key ADSBX_API_KEY
                               ADS-B Exchange API Key
 
-At a minimum, you'll need to specify:
-
-1. -C COT_HOST, where COT_HOST is the IP or Hostname of the CoT Event destination.
-2. One (1) of the following sets of arguments:
-    A. -U DUMP1090_URL, where DUMP1090_URL is the URL to a system running the dump1090 ADS-B decoder.
-    B. -U ADSBX_URL & -X ADSBX_API_KEY, where ADSBX_URL is the URL to a ADS-B Exchange feed you'd like to use, and ADSBX_API_KEY is your ADS-B Exchange API Key.
 
 Troubleshooting
 ===============

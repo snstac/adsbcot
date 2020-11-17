@@ -4,6 +4,7 @@
 """ADS-B Cursor-on-Target Gateway Functions."""
 
 import datetime
+import os
 
 import pycot
 import pytak
@@ -23,21 +24,26 @@ def adsb_to_cot(craft: dict, cot_type: str = None, # NOQA pylint: disable=too-ma
     time = datetime.datetime.now(datetime.timezone.utc)
     stale = stale or adsbcot.constants.DEFAULT_STALE
 
-    lat = craft.get('lat')
-    lon = craft.get('lon')
+    lat = craft.get("lat")
+    lon = craft.get("lon")
 
     if lat is None or lon is None:
         return None
 
-    icao_hex = craft.get('hex').upper()
+    icao_hex = craft.get("hex", "").upper()
+    if not icao_hex:
+        return None
+
     name = f"ICAO-{icao_hex}"
-    flight = craft.get('flight', '').strip()
+
+    flight = craft.get("flight", "").strip()
     if flight:
         callsign = flight
     else:
         callsign = icao_hex
 
-    cot_type = pytak.faa_to_cot_type(craft.get('hex'), None, flight)
+    cot_type = pytak.faa_to_cot_type(
+        craft.get("hex"), craft.get("category"), flight)
 
     point = pycot.Point()
     point.lat = lat
@@ -58,37 +64,38 @@ def adsb_to_cot(craft: dict, cot_type: str = None, # NOQA pylint: disable=too-ma
 
     contact = pycot.Contact()
     contact.callsign = callsign
-    # Not supported by FTS 1.1?
-    # if flight:
-    #    contact.hostname = f'https://flightaware.com/live/flight/{flight}'
 
     track = pycot.Track()
     track.course = craft.get('track', '9999999.0')
 
     # gs: ground speed in knots
-    gs = int(craft.get('gs', 0))
+    gs = int(craft.get("gs", 0))
     if gs:
         track.speed = gs * 0.514444
     else:
-        track.speed = '9999999.0'
+        track.speed = "9999999.0"
 
     remarks = pycot.Remarks()
-    _remark = (f"ICAO24: {icao_hex} Squawk: {craft.get('squawk')} "
-               f"RSSI: {craft.get('rssi')}")
+    _remarks = f"Squawk: {craft.get('squawk')} Category: {craft.get('category')}"
+
     if flight:
-        remarks.value = f"Flight: {flight} " + _remark
+        _remarks = f"{icao_hex}({flight}) {_remarks}"
     else:
-        remarks.value = _remark
+        _remarks = f"{icao_hex} {_remarks}"
+
+    if bool(os.environ.get('DEBUG')):
+        _remarks = f"{_remarks} via adsbcot"
+
+    remarks.value = _remarks
 
     detail = pycot.Detail()
     detail.uid = uid
     detail.contact = contact
     detail.track = track
-    # Not supported by FTS 1.1?
-    # detail.remarks = remarks
+    detail.remarks = remarks
 
     event = pycot.Event()
-    event.version = '2.0'
+    event.version = "2.0"
     event.event_type = cot_type
     event.uid = name
     event.time = time

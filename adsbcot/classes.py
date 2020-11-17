@@ -3,23 +3,12 @@
 
 """ADS-B Cursor-on-Target Class Definitions."""
 
-#import aiofiles
-import concurrent
 
 import aiohttp
 import asyncio
-import json
 import logging
-import os
-import queue
-import random
-import threading
-import time
-import urllib
-import websockets
 
 import pytak
-import requests
 
 import adsbcot
 
@@ -33,162 +22,86 @@ except ImportError:
     pass
 
 
-__author__ = 'Greg Albrecht W2GMD <oss@undef.net>'
-__copyright__ = 'Copyright 2020 Orion Labs, Inc.'
-__license__ = 'Apache License, Version 2.0'
+__author__ = "Greg Albrecht W2GMD <oss@undef.net>"
+__copyright__ = "Copyright 2020 Orion Labs, Inc."
+__license__ = "Apache License, Version 2.0"
 
 
 class ADSBWorker(pytak.MessageWorker):
 
     """Reads ADS-B Data from inputs, renders to CoT, and puts on queue."""
 
-    def __init__(self, event_queue, url, cot_stale, poll_interval: int = None,
-                 api_key: str = None):
-        super().__init__(event_queue, url, cot_stale)
+    def __init__(self, event_queue, url, cot_stale, poll_interval: int = None):
+        super().__init__(event_queue, url)
         self.poll_interval: int = int(poll_interval or adsbcot.DEFAULT_POLL_INTERVAL)
-        self.api_key: str = api_key
+        self.url = url
+        self.cot_stale = cot_stale
+        self._logger.debug("cot_stale='%s'", self.cot_stale)
 
     async def handle_message(self, aircraft: list) -> None:
+        """
+        Transforms Aircraft AIS data to CoT and puts it onto tx queue.
+        """
+        if not isinstance(aircraft, list):
+            self._logger.warning(
+                "Invalid aircraft data, should be a Python list.")
+            return False
+
         if not aircraft:
-            self._logger.warning('Empty aircraft list')
+            self._logger.warning("Empty aircraft list")
             return False
 
         i = 1
         for craft in aircraft:
+            self._logger.debug("craft='%s'", craft)
             event = adsbcot.adsb_to_cot(craft, stale=self.cot_stale)
             if not event:
-                self._logger.debug(f'Empty CoT Event for craft={craft}')
+                self._logger.debug(f"Empty CoT Event for craft={craft}")
                 i += 1
                 continue
 
             self._logger.debug(
-                'Handling %s/%s ICAO: %s Flight: %s Category: %s',
-                i, len(aircraft), craft.get('hex'), craft.get('flight'),
-                craft.get('category'))
+                "Handling %s/%s ICAO: %s Flight: %s Category: %s",
+                i, len(aircraft), craft.get("hex"), craft.get("flight"),
+                craft.get("category"))
             await self._put_event_queue(event)
             i += 1
 
     async def _get_dump1090_feed(self):
+        """
+        Polls the dump1090 JSON API and passes data to message handler.
+        """
         async with aiohttp.ClientSession() as session:
-            resp = await session.request(method='GET', url=self.url.geturl())
+            resp = await session.request(method="GET", url=self.url.geturl())
             resp.raise_for_status()
-            json_resp = await resp.json()
-            aircraft = json_resp.get('aircraft')
-            self._logger.debug('Retrieved %s aircraft', len(aircraft))
-            await self.handle_message(aircraft)
 
-    async def _get_adsbx_feed(self) -> None:
-        headers = {'api-auth': self.api_key}
-        response = requests.get(self.url.geturl(), headers=headers)
-        jresponse = json.loads(response.text)
-        aircraft = jresponse.get('ac')
-        self._logger.debug('Retrieved %s aircraft', len(aircraft))
-        await self.handle_message(aircraft)
+            json_resp = await resp.json()
+            aircraft = json_resp.get("aircraft")
+            self._logger.debug(
+                "Retrieved %s aircraft from %s",
+                len(aircraft), self.url.geturl())
+
+            await self.handle_message(aircraft)
 
     async def run(self):
         """Runs this Thread, Reads from Pollers."""
-        self._logger.info("Running ADSBWorker with URL '%s'", self.url.geturl())
+        self._logger.info(
+            "Running ADSBWorker with URL '%s'", self.url.geturl())
 
-        if "aircraft.json" in self.url.path:
-            feed_func = self._get_dump1090_feed
-        else:
-            feed_func = self._get_adsbx_feed
-
-        self._logger.debug("url=%s feed_func=%s", self.url, feed_func)
         while 1:
-            await feed_func()
+            await self._get_dump1090_feed()
             await asyncio.sleep(self.poll_interval)
 
 
-class ADSBNetReceiver:
+class ADSBNetWorker(ADSBWorker):
 
-    _logger = logging.getLogger(__name__)
-    if not _logger.handlers:
-        _logger.setLevel(adsbcot.LOG_LEVEL)
-        _console_handler = logging.StreamHandler()
-        _console_handler.setLevel(adsbcot.LOG_LEVEL)
-        _console_handler.setFormatter(adsbcot.LOG_FORMAT)
-        _logger.addHandler(_console_handler)
-        _logger.propagate = False
-    logging.getLogger('asyncio').setLevel(adsbcot.LOG_LEVEL)
-
-    def __init__(self, net_queue, url):
-        self.net_queue = net_queue
-        self.url = url
-
-    async def run(self):
-        self._logger.info(
-            "Running ADSBNetReceiver for URL=%s", self.url.geturl())
-
-        if ":" in self.url.path:
-            host, port = self.url.path.split(":")
-        else:
-            host = self.url.path
-            port = adsbcot.DEFAULT_DUMP1090_TCP_PORT
-
-        self._logger.debug("host=%s port=%s", host, port)
-        reader, writer = await asyncio.open_connection(host, port)
-        while 1:
-            received = await reader.read(4096)
-            self.net_queue.put_nowait(received)
-
-
-class ADSBNetWorker:
-
-    _logger = logging.getLogger(__name__)
-    if not _logger.handlers:
-        _logger.setLevel(adsbcot.LOG_LEVEL)
-        _console_handler = logging.StreamHandler()
-        _console_handler.setLevel(adsbcot.LOG_LEVEL)
-        _console_handler.setFormatter(adsbcot.LOG_FORMAT)
-        _logger.addHandler(_console_handler)
-        _logger.propagate = False
-    logging.getLogger('asyncio').setLevel(adsbcot.LOG_LEVEL)
-
-    def __init__(self, msg_queue, net_queue, data_type, stale,
-                 send_obj: bool = False):
-        self.msg_queue = msg_queue
+    def __init__(self, event_queue, net_queue, data_type, cot_stale):
+        super().__init__(event_queue, None, cot_stale)
         self.net_queue = net_queue
         self.data_type = data_type
-        self.stale = stale
-        self._send_obj = send_obj
-
-    async def _put_msg_queue(self, aircraft: list) -> None:
-        if not aircraft:
-            self._logger.warning('Empty aircraft list')
-            return
-
-        i = 1
-        for craft in aircraft:
-
-            cot_event = adsbcot.adsb_to_cot(craft, stale=self.stale)
-            self._logger.debug("craft: %s", craft)
-            if not cot_event:
-                self._logger.debug(f'Empty CoT Event for craft={craft}')
-                i += 1
-                continue
-
-            self._logger.debug(
-                'Handling %s/%s ICAO: %s Flight: %s Category: %s',
-                i, len(aircraft), craft.get('hex'), craft.get('flight'),
-                craft.get('category'))
-
-            if self._send_obj:
-                send_event = cot_event
-            else:
-                send_event = cot_event.render(
-                    encoding='UTF-8', standalone=True)
-
-            if send_event:
-                try:
-                    await self.msg_queue.put(send_event)
-                except queue.Full as exc:
-                    self._logger.exception(exc)
-                    self._logger.warning(
-                        'Lost CoT Event (queue full): "%s"', send_event)
-            i += 1
 
     def _reset_local_buffer(self):
+        """Resets Socket Buffers."""
         self.local_buffer_adsb_msg = []
         self.local_buffer_adsb_ts = []
         self.local_buffer_commb_msg = []
@@ -196,17 +109,12 @@ class ADSBNetWorker:
 
     async def run(self):
         self._logger.info(
-            "Running ADSBNetWorker for data_type=%s", self.data_type)
+            "Running ADSBNetWorker for data_type='%s'", self.data_type)
 
         self._reset_local_buffer()
+
         decoder = pyModeS.streamer.decode.Decode()
         net_client = pyModeS.streamer.source.NetSource("x", 1, self.data_type)
-
-        hello_event = adsbcot.hello_event()
-        if self._send_obj:
-            await self.msg_queue.put(hello_event)
-        else:
-            await self.msg_queue.put(hello_event.render(encoding='UTF-8', standalone=True))
 
         while 1:
             messages = []
@@ -222,7 +130,7 @@ class ADSBNetWorker:
             elif "skysense" in self.data_type:
                 messages = net_client.read_skysense_buffer()
 
-            self._logger.debug('len(msg)=%s', len(messages))
+            self._logger.debug("Received %s messages", len(messages))
 
             if not messages:
                 continue
@@ -262,6 +170,7 @@ class ADSBNetWorker:
 
                 acs = decoder.get_aircraft()
                 for k, v in acs.items():
+                    self._logger.debug("acs=%s", acs[k])
                     lat = v.get("lat")
                     lon = v.get("lon")
                     flight = v.get("call", k)
@@ -278,6 +187,45 @@ class ADSBNetWorker:
                                 "gs": gs
                             }
                         ]
-                        await self._put_msg_queue(aircraft)
+                        await self.handle_message(aircraft)
                     else:
                         continue
+
+
+class ADSBNetReceiver:
+
+    _logger = logging.getLogger(__name__)
+    if not _logger.handlers:
+        _logger.setLevel(adsbcot.LOG_LEVEL)
+        _console_handler = logging.StreamHandler()
+        _console_handler.setLevel(adsbcot.LOG_LEVEL)
+        _console_handler.setFormatter(adsbcot.LOG_FORMAT)
+        _logger.addHandler(_console_handler)
+        _logger.propagate = False
+    logging.getLogger("asyncio").setLevel(adsbcot.LOG_LEVEL)
+
+    def __init__(self, net_queue, url, data_type):
+        self.net_queue = net_queue
+        self.url = url
+        self.data_type = data_type
+
+    async def run(self):
+        self._logger.info(
+            "Running ADSBNetReceiver for URL=%s", self.url.geturl())
+
+        if ":" in self.url.path:
+            host, port = self.url.path.split(":")
+        else:
+            host = self.url.path
+            if self.data_type == "raw":
+                port = adsbcot.DEFAULT_DUMP1090_TCP_RAW_PORT
+            elif self.data_type == "beast":
+                port = adsbcot.DEFAULT_DUMP1090_TCP_BEAST_PORT
+            else:
+                raise Exception("Invalid data_type='%s'" % self.data_type)
+
+        self._logger.debug("host=%s port=%s", host, port)
+        reader, writer = await asyncio.open_connection(host, port)
+        while 1:
+            received = await reader.read(4096)
+            self.net_queue.put_nowait(received)

@@ -15,9 +15,10 @@ ADS-B Cursor-on-Target Gateway.
 
 """
 
-from .constants import (LOG_FORMAT, LOG_LEVEL, DEFAULT_COT_PORT,  # NOQA
-                        DEFAULT_INTERVAL, DEFAULT_STALE, DEFAULT_TYPE,
-                        DEFAULT_DUMP1090_TCP_PORT)
+from .constants import (LOG_FORMAT, LOG_LEVEL,  # NOQA
+                        DEFAULT_POLL_INTERVAL, DEFAULT_COT_STALE,
+                        DEFAULT_DUMP1090_TCP_RAW_PORT,
+                        DEFAULT_DUMP1090_TCP_BEAST_PORT)
 
 from .functions import adsb_to_cot, hello_event  # NOQA
 

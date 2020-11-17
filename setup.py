@@ -13,7 +13,7 @@ import sys
 import setuptools
 
 __title__ = 'adsbcot'
-__version__ = '3.0.0b6'
+__version__ = '3.0.0b7'
 __author__ = 'Greg Albrecht W2GMD <oss@undef.net>'
 __copyright__ = 'Copyright 2020 Orion Labs, Inc.'
 __license__ = 'Apache License, Version 2.0'
@@ -29,9 +29,7 @@ def publish():
 
 publish()
 
-extras = {
-   'with_simplejson': ['simplejson>=3.5.3']
-}
+
 setuptools.setup(
     version=__version__,
     name=__title__,
@@ -48,10 +46,8 @@ setuptools.setup(
     include_package_data=True,
     install_requires=[
         'pycot >= 2.5.0',
-        'pytak >= 2.1.0',
-        'requests',
-        'aiohttp',
-        'websockets'
+        'pytak >= 3.1.0',
+        'aiohttp'
     ],
     extras_require={
         'with_pymodes': 'pymodes==2.8'
