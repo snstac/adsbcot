@@ -13,7 +13,7 @@ import sys
 import setuptools
 
 __title__ = 'adsbcot'
-__version__ = '3.0.0'
+__version__ = '3.0.1'
 __author__ = 'Greg Albrecht W2GMD <oss@undef.net>'
 __copyright__ = 'Copyright 2020 Orion Labs, Inc.'
 __license__ = 'Apache License, Version 2.0'

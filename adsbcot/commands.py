@@ -35,7 +35,7 @@ __license__ = 'Apache License, Version 2.0'
 
 
 async def main(opts):
-    loop = asyncio.get_running_loop()
+    loop = get_running_loop()
     tx_queue: asyncio.Queue = asyncio.Queue()
     rx_queue: asyncio.Queue = asyncio.Queue()
     cot_url: urllib.parse.ParseResult = urllib.parse.urlparse(opts.cot_url)
