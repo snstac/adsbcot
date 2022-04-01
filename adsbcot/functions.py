@@ -66,7 +66,7 @@ def adsb_to_cot(craft: dict, cot_type: str = None, # NOQA pylint: disable=too-ma
     contact.callsign = callsign
 
     track = pycot.Track()
-    track.course = craft.get('track', '9999999.0')
+    track.course = craft.get('trk', '9999999.0')
 
     # gs: ground speed in knots
     gs = int(craft.get("gs", 0))
