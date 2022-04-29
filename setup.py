@@ -1,9 +1,7 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-"""
-Setup for the ADS-B Cursor-on-Target Gateway.
-
+"""ADSBCOT Setup.
 Source:: https://github.com/ampledata/adsbcot
 """
 
@@ -36,18 +34,17 @@ setuptools.setup(
     packages=[__title__],
     package_dir={__title__: __title__},
     url=f"https://github.com/ampledata/{__title__}",
-    description="ADS-B Cursor-On-Target Gateway.",
+    description="ADS-B to Cursor-On-Target Gateway.",
     author="Greg Albrecht",
     author_email="oss@undef.net",
     package_data={"": ["LICENSE"]},
-    license=open("LICENSE").read(),
+    license="Apache License, Version 2.0",
     long_description=open("README.rst").read(),
     zip_safe=False,
     include_package_data=True,
     install_requires=["aircot", "pytak >= 3.1.0", "aiohttp"],
     extras_require={"with_pymodes": "pymodes==2.8"},
     classifiers=[
-        "Topic :: Communications :: Ham Radio",
         "Programming Language :: Python",
         "License :: OSI Approved :: Apache Software License",
     ],

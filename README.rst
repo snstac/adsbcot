@@ -1,17 +1,20 @@
-adsbcot - ADS-B Cursor-On-Target Gateway.
-*****************************************
+ADS-B to Cursor-On-Target Gateway.
+**********************************
 
-.. image:: https://raw.githubusercontent.com/ampledata/adsbcot/main/docs/screenshot-1604561447-25.png
+.. image:: https://raw.githubusercontent.com/ampledata/adsbxcot/main/docs/Screenshot_20201026-142037_ATAK-25p.jpg
    :alt: Screenshot of ADS-B PLI in ATAK.
-   :target: https://github.com/ampledata/adsbcot/blob/main/docs/screenshot-1604561447.png
+   :target: https://github.com/ampledata/adsbxcot/blob/main/docs/Screenshot_20201026-142037_ATAK.jpg
 
-The adsbcot ADS-B Cursor on Target Gateway transforms Automatic Dependent
+
+**IF YOU HAVE AN URGENT OPERATIONAL NEED**: Email ops@undef.net or sms+call +1-415-598-8226
+
+The ADSBCOT ADS-B to Cursor-On-Target Gateway transforms Automatic Dependent
 Surveillance-Broadcast (ADS-B) aircraft position information into Cursor On
 Target (COT) Position Location Information (PLI) for display on Situational
 Awareness (SA) applications such as the Android Team Awareness Kit (ATAK),
-WinTAK, RaptorX, et al.
+WinTAK, RaptorX, TAKX, iTAK, et al.
 
-**IF YOU HAVE AN URGENT OPERATIONAL NEED**: Email ops@undef.net or call/sms +1-415-598-8226
+For more information on the TAK suite of tools, see: https://www.tak.gov/
 
 ADS-B Data can be recevied from a dump1090 recevier using:
 1. Aircraft JSON HTTP feed. See: https://github.com/flightaware/dump1090/blob/master/README-json.md
@@ -23,6 +26,18 @@ If you'd like to feed ADS-B from another source, consider these:
 * `adsbxcot <https://github.com/ampledata/adsbxcot>`_: ADS-B Exchange to Cursor on Target (COT) Gateway. Transforms ADS-B position messages to CoT PLI Events.
 * `stratuxcot <https://github.com/ampledata/stratuxcot>`_: Stratux ADS-B to Cursor on Target (COT) Gateway. Transforms position messages to CoT PLI Events.
 
+Support ADSBCOT Development
+===========================
+
+ADSBCOT has been developed for the Disaster Response, Public Safety and
+Frontline Healthcare community. This software is currently provided at no-cost
+to users. Any contribution you can make to further this project's development
+efforts is greatly appreciated.
+
+.. image:: https://www.buymeacoffee.com/assets/img/custom_images/orange_img.png
+    :target: https://www.buymeacoffee.com/ampledata
+    :alt: Support ADSBCOT development: Buy me a coffee!
+
 Installation
 ============
 
@@ -32,7 +47,7 @@ directly from this source tree.
 
 Install from the Python Package Index (PyPI)::
 
-    $ pip install adsbcot
+    $ python3 -m pip install adsbcot
 
 
 To support direct network streaming (raw & beast) from dump1090, you must
@@ -40,14 +55,14 @@ install the extra package `pyModeS <https://github.com/junzis/pyModeS>`_.
 
 To install with pyModeS support::
 
-    $ pip install adsbcot[with_pymodes]
+    $ python3 -m pip install adsbcot[with_pymodes]
 
 
 Install from this source tree::
 
     $ git clone https://github.com/ampledata/adsbcot.git
     $ cd adsbcot/
-    $ python setup.py install
+    $ python3 setup.py install
 
 
 Usage
@@ -55,26 +70,45 @@ Usage
 
 The `adsbcot` command-line program has several runtime arguments::
 
-    usage: adsbcot [-h] -U COT_URL [-S COT_STALE] [-K FTS_TOKEN] -D DUMP1090_URL
-                   [-I POLL_INTERVAL]
+    usage: adsbcot [-h] [-c CONFIG_FILE]
 
     optional arguments:
-      -h, --help            show this help message and exit
-      -U COT_URL, --cot_url COT_URL
-                            URL to CoT Destination.
-      -S COT_STALE, --cot_stale COT_STALE
-                            CoT Stale period, in seconds
-      -K FTS_TOKEN, --fts_token FTS_TOKEN
-                            FTS REST API Token
-      -D DUMP1090_URL, --dump1090_url DUMP1090_URL
-                            URL to dump1090 JSON API.
-      -I POLL_INTERVAL, --poll_interval POLL_INTERVAL
-                            For HTTP: Polling Interval
+    -h, --help            show this help message and exit
+    -c CONFIG_FILE, --CONFIG_FILE CONFIG_FILE
+    
+
+Example config.ini
+==================
+Connect to dump1090's Beast TCP running on host 172.17.2.122, port 30005 &
+forward CoT to host 172.17.2.152, port 8087 use following config.ini::
+
+    [adsbcot]
+    COT_URL = 172.17.2.152:8087
+    DUMP1090_URL = tcp+beast://172.17.2.122:30005
+
+Connect to dump1090's Raw TCP running on host 172.17.2.122, port 30002 &
+forward CoT to host 172.17.2.152, port 8087::
+
+    [adsbcot]
+    COT_URL = 172.17.2.152:8087
+    DUMP1090_URL = tcp+raw://172.17.2.122:30002
+
+
+Poll dump1090's JSON API at http://172.17.2.122:8080/data/aircraft.json with a
+10 second interval & forward CoT to host 172.17.2.152, port 8087::
+
+    [adsbcot]
+    COT_URL = 172.17.2.152:8087
+    DUMP1090_URL = thttp://172.17.2.122:8080/data/aircraft.json
+    POLL_INTERVAL = 10
+
 
 Troubleshooting
 ===============
 
-To report bugs, please set the DEBUG=1 environment variable to collect logs.
+To report bugs, please set the DEBUG=1 environment variable to collect logs::
+
+    $ DEBUG=1 adsbcot -c config.ini
 
 Source
 ======
@@ -99,38 +133,3 @@ adsbcot is licensed under the Apache License, Version 2.0. See LICENSE for detai
 
 `pyModeS <https://github.com/junzis/pyModeS>`_ is an optional extra package,
 and is licensed under the GNU General Public License v3.0.
-
-Examples
-========
-Connect to dump1090's Beast TCP running on host 172.17.2.122, port 30005 &
-forward CoT to host 172.17.2.152, port 8087::
-
-    $ adsbcot -U 172.17.2.152:8087 -D tcp+beast:172.17.2.122:30005
-
-
-Connect to dump1090's Raw TCP running on host 172.17.2.122, port 30002 &
-forward CoT to host 172.17.2.152, port 8087::
-
-    $ adsbcot -U 172.17.2.152:8087 -D tcp+raw:172.17.2.122:30002
-
-
-Poll dump1090's JSON API at http://172.17.2.122:8080/data/aircraft.json with a
-10 second interval & forward CoT to host 172.17.2.152, port 8087::
-
-    $ adsbcot -U 172.17.2.152:8087 -D http://172.17.2.122:8080/data/aircraft.json -I 10
-
-Running as a Daemon
-===================
-First, install supervisor::
-
-    $ sudo yum install supervisor
-    $ sudo service supervisord start
-
-Create /etc/supervisor.d/adsbcot.ini with the following content::
-
-    [program:adsbcot]
-    command=adsbcot -U https://adsbexchange.com/api/aircraft/v2/lat/36.7783/lon/-119.4179/dist/400/ -X xxx -I 5 -C 127.0.0.1 -P 8087
-
-And update supervisor::
-
-    $ sudo supervisorctl update

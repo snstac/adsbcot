@@ -11,7 +11,7 @@ __copyright__ = "Copyright 2022 Greg Albrecht"
 __license__ = "Apache License, Version 2.0"
 
 
-if bool(os.environ.get("DEBUG")):
+if os.getenv("DEBUG"):
     LOG_LEVEL = logging.DEBUG
     LOG_FORMAT = logging.Formatter(
         (

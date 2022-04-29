@@ -19,9 +19,11 @@ __copyright__ = "Copyright 2022 Greg Albrecht"
 __license__ = "Apache License, Version 2.0"
 
 
-def adsb_to_cot_xml(craft: dict, cot_type: str = None, stale: int = None) -> ET.Element:
+def adsb_to_cot_xml(  # pylint: disable=too-many-locals,too-many-statements
+    craft: dict, cot_type: str = None, stale: int = None
+) -> ET.Element:
     """
-    Transforms a Dump1090 ADS-B Aircraft Object to a Cursor-on-Target PLI.
+    Transforms a Dump1090 ADS-B Aircraft Object to a Cursor-on-Target PLI XML.
     """
     time = datetime.datetime.now(datetime.timezone.utc)
     cot_stale = stale or adsbcot.DEFAULT_COT_STALE
@@ -70,9 +72,9 @@ def adsb_to_cot_xml(craft: dict, cot_type: str = None, stale: int = None) -> ET.
     track.set("course", craft.get("track", "9999999.0"))
 
     # gs: ground speed in knots
-    gs = int(craft.get("gs", 0))
-    if gs:
-        track.set("speed", str(gs * 0.514444))
+    gnds = int(craft.get("gs", 0))
+    if gnds:
+        track.set("speed", str(gnds * 0.514444))
     else:
         track.set("speed", "9999999.0")
 
@@ -117,4 +119,7 @@ def adsb_to_cot_xml(craft: dict, cot_type: str = None, stale: int = None) -> ET.
 
 
 def adsb_to_cot(craft: dict, cot_type: str = None, stale: int = None) -> bytes:
+    """
+    Transforms a Dump1090 ADS-B Aircraft Object to a Cursor-on-Target PLI String.
+    """
     return ET.tostring(adsb_to_cot_xml(craft, cot_type, stale))

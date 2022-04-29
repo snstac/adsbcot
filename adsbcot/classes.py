@@ -4,22 +4,19 @@
 """ADS-B Cursor-On-Target Class Definitions."""
 
 
-import aiohttp
 import asyncio
 import logging
 
-import aircot
+import aiohttp
 import pytak
 
 import adsbcot
 
-with_pymodes = False
+# We won't use pyModeS if it isn't installed:
 try:
     import pyModeS.streamer.source
     import pyModeS.streamer.decode
     import pyModeS as pms
-
-    with_pymodes = True
 except ImportError:
     pass
 
@@ -33,7 +30,7 @@ class ADSBWorker(pytak.MessageWorker):
 
     """Reads ADS-B Data from inputs, renders to CoT, and puts on queue."""
 
-    def __init__(
+    def __init__(  # pylint: disable=too-many-arguments
         self,
         event_queue,
         url,
@@ -67,20 +64,20 @@ class ADSBWorker(pytak.MessageWorker):
             if self.filters:
                 if "ICAO" in self.filters:
                     icao = craft.get("hex", "").upper()
-                    if not icao in self.filters.get("ICAO", "include"):
+                    if icao not in self.filters.get("ICAO", "include"):
                         continue
                     if icao in self.filters.get("ICAO", "exclude"):
                         continue
                 elif "FLIGHT" in self.filters:
                     flight = craft.get("flight", "").upper()
-                    if not flight in self.filters.get("FLIGHT", "include"):
+                    if flight not in self.filters.get("FLIGHT", "include"):
                         continue
                     if flight in self.filters.get("FLIGHT", "exclude"):
                         continue
 
             event = adsbcot.adsb_to_cot(craft, stale=self.cot_stale)
             if not event:
-                self._logger.debug(f"Empty CoT Event for craft={craft}")
+                self._logger.debug("Empty CoT Event for craft=%s", craft)
                 i += 1
                 continue
 
@@ -112,7 +109,7 @@ class ADSBWorker(pytak.MessageWorker):
 
             await self.handle_message(aircraft)
 
-    async def run(self):
+    async def run(self, number_of_iterations=-1):
         """Runs this Thread, Reads from Pollers."""
         self._logger.info("Running ADSBWorker with URL '%s'", self.url.geturl())
 
@@ -122,10 +119,18 @@ class ADSBWorker(pytak.MessageWorker):
 
 
 class ADSBNetWorker(ADSBWorker):
-    def __init__(self, event_queue, net_queue, data_type, cot_stale, filters):
+    """Reads ADS-B Data from network, renders to COT, and puts on queue."""
+
+    def __init__(
+        self, event_queue, net_queue, data_type, cot_stale, filters
+    ):  # NOQA pylint: disable=too-many-arguments
         super().__init__(event_queue, None, cot_stale, None, filters)
         self.net_queue = net_queue
         self.data_type = data_type
+        self.local_buffer_adsb_msg = []
+        self.local_buffer_adsb_ts = []
+        self.local_buffer_commb_msg = []
+        self.local_buffer_commb_ts = []
 
     def _reset_local_buffer(self):
         """Resets Socket Buffers."""
@@ -134,7 +139,10 @@ class ADSBNetWorker(ADSBWorker):
         self.local_buffer_commb_msg = []
         self.local_buffer_commb_ts = []
 
-    async def run(self):
+    async def run(
+        self, number_of_iterations=-1
+    ):  # NOQA pylint: disable=too-many-locals, too-many-branches
+        """Runs the main process loop."""
         self._logger.info("Running ADSBNetWorker for data_type='%s'", self.data_type)
 
         self._reset_local_buffer()
@@ -160,67 +168,68 @@ class ADSBNetWorker(ADSBWorker):
 
             if not messages:
                 continue
-            else:
-                for msg, t in messages:
-                    if len(msg) != 28:  # wrong data length
-                        continue
 
-                    df = pms.df(msg)
+            for msg, t_msg in messages:
+                if len(msg) != 28:  # wrong data length
+                    continue
 
-                    if df != 17:  # not ADSB
-                        continue
+                dl_fmt = pms.df(msg)
 
-                    if pms.crc(msg) != 0:  # CRC fail
-                        continue
+                if dl_fmt != 17:  # not ADSB
+                    continue
 
-                    icao = pms.adsb.icao(msg)
-                    tc = pms.adsb.typecode(msg)
+                if pms.crc(msg) != 0:  # CRC fail
+                    continue
 
-                    if df == 17 or df == 18:
-                        self.local_buffer_adsb_msg.append(msg)
-                        self.local_buffer_adsb_ts.append(t)
-                    elif df == 20 or df == 21:
-                        self.local_buffer_commb_msg.append(msg)
-                        self.local_buffer_commb_ts.append(t)
-                    else:
-                        continue
+                # icao = pms.adsb.icao(msg)
+                # typecode = pms.adsb.typecode(msg)
 
-                if len(self.local_buffer_adsb_msg) > 1:
-                    decoder.process_raw(
-                        self.local_buffer_adsb_ts,
-                        self.local_buffer_adsb_msg,
-                        self.local_buffer_commb_ts,
-                        self.local_buffer_commb_msg,
-                    )
-                    self._reset_local_buffer()
+                if dl_fmt in (17, 18):
+                    self.local_buffer_adsb_msg.append(msg)
+                    self.local_buffer_adsb_ts.append(t_msg)
+                elif dl_fmt in (20, 21):
+                    self.local_buffer_commb_msg.append(msg)
+                    self.local_buffer_commb_ts.append(t_msg)
+                else:
+                    continue
 
-                acs = decoder.get_aircraft()
-                for k, v in acs.items():
-                    # self._logger.debug("acs=%s", acs[k])
-                    lat = v.get("lat")
-                    lon = v.get("lon")
-                    flight = v.get("call", k)
-                    alt_geom = v.get("alt")
-                    gs = v.get("gs")
-                    reg = v.get("r")
-                    if lat and lon and flight and alt_geom and gs:
-                        aircraft = [
-                            {
-                                "hex": k,
-                                "lat": lat,
-                                "lon": lon,
-                                "flight": flight.replace("_", ""),
-                                "alt_geom": alt_geom,
-                                "gs": gs,
-                                "reg": reg,
-                            }
-                        ]
-                        await self.handle_message(aircraft)
-                    else:
-                        continue
+            if len(self.local_buffer_adsb_msg) > 1:
+                decoder.process_raw(
+                    self.local_buffer_adsb_ts,
+                    self.local_buffer_adsb_msg,
+                    self.local_buffer_commb_ts,
+                    self.local_buffer_commb_msg,
+                )
+                self._reset_local_buffer()
+
+            acs = decoder.get_aircraft()
+            for key, val in acs.items():
+                # self._logger.debug("acs=%s", acs[k])
+                lat = val.get("lat")
+                lon = val.get("lon")
+                flight = val.get("call", key)
+                alt_geom = val.get("alt")
+                gnds = val.get("gs")
+                reg = val.get("r")
+                if lat and lon and flight and alt_geom and gnds:
+                    aircraft = [
+                        {
+                            "hex": key,
+                            "lat": lat,
+                            "lon": lon,
+                            "flight": flight.replace("_", ""),
+                            "alt_geom": alt_geom,
+                            "gs": gnds,
+                            "reg": reg,
+                        }
+                    ]
+                    await self.handle_message(aircraft)
+                else:
+                    continue
 
 
-class ADSBNetReceiver:
+class ADSBNetReceiver:  # pylint: disable=too-few-public-methods
+    """Reads ADS-B Data from network and puts on queue."""
 
     _logger = logging.getLogger(__name__)
     if not _logger.handlers:
@@ -238,6 +247,7 @@ class ADSBNetReceiver:
         self.data_type = data_type
 
     async def run(self):
+        """Runs the main process loop."""
         self._logger.info("Running ADSBNetReceiver for URL=%s", self.url.geturl())
 
         if ":" in self.url.path:
@@ -253,7 +263,7 @@ class ADSBNetReceiver:
 
         self._logger.debug("host=%s port=%s", host, port)
 
-        reader, writer = await asyncio.open_connection(host, port)
+        reader, _ = await asyncio.open_connection(host, port)
 
         if self.data_type == "raw":
             while 1:
