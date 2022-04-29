@@ -69,7 +69,7 @@ def adsb_to_cot_xml(  # pylint: disable=too-many-locals,too-many-statements
     contact.set("callsign", callsign)
 
     track: ET.Element = ET.Element("track")
-    track.set("course", craft.get("track", "9999999.0"))
+    track.set("course", craft.get("trk", "9999999.0"))
 
     # gs: ground speed in knots
     gnds = int(craft.get("gs", 0))
