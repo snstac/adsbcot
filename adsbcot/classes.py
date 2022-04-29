@@ -211,7 +211,7 @@ class ADSBNetWorker(ADSBWorker):
                 alt_geom = val.get("alt")
                 gnds = val.get("gs")
                 reg = val.get("r")
-                trk = v.get("trk")
+                trk = val.get("trk")
                 if lat and lon and flight and alt_geom and gnds and trk:
                     aircraft = [
                         {
