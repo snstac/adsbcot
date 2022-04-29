@@ -1,13 +1,13 @@
-adsbcot - ADSB Cursor-on-Target Gateway.
-****************************************
+adsbcot - ADS-B Cursor-On-Target Gateway.
+*****************************************
 
 .. image:: https://raw.githubusercontent.com/ampledata/adsbcot/main/docs/screenshot-1604561447-25.png
    :alt: Screenshot of ADS-B PLI in ATAK.
    :target: https://github.com/ampledata/adsbcot/blob/main/docs/screenshot-1604561447.png
 
 The adsbcot ADS-B Cursor on Target Gateway transforms Automatic Dependent
-Surveillance-Broadcast (ADS-B) aircraft position information into Cursor on
-Target (CoT) Position Location Information (PLI) for display on Situational
+Surveillance-Broadcast (ADS-B) aircraft position information into Cursor On
+Target (COT) Position Location Information (PLI) for display on Situational
 Awareness (SA) applications such as the Android Team Awareness Kit (ATAK),
 WinTAK, RaptorX, et al.
 
@@ -18,10 +18,10 @@ ADS-B Data can be recevied from a dump1090 recevier using:
 2. Raw TCP (via `pyModeS <https://github.com/junzis/pyModeS>`_)
 3. Beast TCP (via `pyModeS <https://github.com/junzis/pyModeS>`_)
 
-If you'd like to feed AIS data from another source, consider these:
+If you'd like to feed ADS-B from another source, consider these:
 
-* `adsbxcot <https://github.com/ampledata/adsbxcot>`_: ADS-B Exchange to Cursor on Target (CoT) Gateway. Transforms ADS-B position messages to CoT PLI Events.
-* `stratuxcot <https://github.com/ampledata/stratuxcot>`_: Stratux ADS-B to Cursor on Target (CoT) Gateway. Transforms position messages to CoT PLI Events.
+* `adsbxcot <https://github.com/ampledata/adsbxcot>`_: ADS-B Exchange to Cursor on Target (COT) Gateway. Transforms ADS-B position messages to CoT PLI Events.
+* `stratuxcot <https://github.com/ampledata/stratuxcot>`_: Stratux ADS-B to Cursor on Target (COT) Gateway. Transforms position messages to CoT PLI Events.
 
 Installation
 ============
@@ -76,14 +76,6 @@ Troubleshooting
 
 To report bugs, please set the DEBUG=1 environment variable to collect logs.
 
-Unit Test/Build Status
-======================
-
-adsbcot's current unit test and build status is available via Travis CI:
-
-.. image:: https://travis-ci.com/ampledata/adsbcot.svg?branch=main
-    :target: https://travis-ci.com/ampledata/adsbcot
-
 Source
 ======
 The source for adsbcot can be found on Github: https://github.com/ampledata/adsbcot
@@ -96,7 +88,7 @@ https://ampledata.org/
 
 Copyright
 =========
-adsbcot is Copyright 2020 Orion Labs, Inc. https://www.orionlabs.io
+adsbcot is Copyright 2022 Greg Albrecht
 
 `pyModeS <https://github.com/junzis/pyModeS>`_ is an optional extra package,
 and is Copyright (C) 2015 Junzi Sun (TU Delft).
