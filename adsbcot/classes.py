@@ -222,7 +222,7 @@ class ADSBNetWorker(ADSBWorker):
                             "alt_geom": alt_geom,
                             "gs": gnds,
                             "reg": reg,
-                            "trk": trk
+                            "trk": trk,
                         }
                     ]
                     await self.handle_message(aircraft)

@@ -5,6 +5,8 @@
 
 import unittest
 
+import xml.etree.ElementTree as ET
+
 import adsbcot
 
 __author__ = "Greg Albrecht W2GMD <oss@undef.net>"
@@ -122,9 +124,27 @@ class FunctionsTestCase(unittest.TestCase):
         """
         aircraft = TEST_DUMP1090_FEED["aircraft"]
         craft = aircraft[0]
-        cot_msg = adsbcot.functions.adsb_to_cot(craft)
-        self.assertEqual(cot_msg.event_type, "a-n-A-C-F")
-        self.assertEqual(cot_msg.uid, "ICAO24.a9ee47")
+        cot = adsbcot.functions.adsb_to_cot_xml(craft)
+
+        assert isinstance(cot, ET.Element)
+        assert cot.tag == "event"
+        assert cot.attrib["version"] == "2.0"
+        assert cot.attrib["type"] == "a-n-A-C-F"
+        assert cot.attrib["uid"] == "ICAO-A9EE47"
+
+        point = cot.findall("point")
+        assert point[0].tag == "point"
+        assert point[0].attrib["lat"] == "37.836449"
+        assert point[0].attrib["lon"] == "-122.030281"
+        assert point[0].attrib["hae"] == "1143.0"
+
+        detail = cot.findall("detail")
+        assert detail[0].tag == "detail"
+        assert detail[0].attrib["uid"] == "ICAO-A9EE47"
+
+        track = detail[0].findall("track")
+        assert track[0].attrib["course"] == "9999999.0"
+        assert track[0].attrib["speed"] == "40.641076"
 
 
 if __name__ == "__main__":

@@ -51,8 +51,8 @@ def adsb_to_cot_xml(  # pylint: disable=too-many-locals,too-many-statements
     point: ET.Element = ET.Element("point")
     point.set("lat", str(lat))
     point.set("lon", str(lon))
-    point.set("ce", craft.get("nac_p", "9999999.0"))
-    point.set("le", craft.get("nac_v", "9999999.0"))
+    point.set("ce", str(craft.get("nac_p", "9999999.0")))
+    point.set("le", str(craft.get("nac_v", "9999999.0")))
 
     # alt_geom: geometric (GNSS / INS) altitude in feet referenced to the
     #           WGS84 ellipsoid
@@ -69,7 +69,7 @@ def adsb_to_cot_xml(  # pylint: disable=too-many-locals,too-many-statements
     contact.set("callsign", callsign)
 
     track: ET.Element = ET.Element("track")
-    track.set("course", craft.get("trk", "9999999.0"))
+    track.set("course", str(craft.get("trk", "9999999.0")))
 
     # gs: ground speed in knots
     gnds = int(craft.get("gs", 0))
