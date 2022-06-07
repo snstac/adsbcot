@@ -87,9 +87,9 @@ a INI-stile configuration file, with the following priority:
 
 Parameters:
 
-* COT_URL: (optional) Destination for Cursor-On-Target messages. See `PyTAK <https://github.com/ampledata/pytak#configuration-parameters>`_ for options.
-* DUMP1090_URL: dump1090 source URL, one of: tcp+beast://, tcp+raw:// or http://
-* POLL_INTERVAL: (optional) Period in seconds to poll a dump1090 HTTP aircraft.json feed.
+* **DUMP1090_URL**: dump1090 source URL, one of: tcp+beast://, tcp+raw:// or http://
+* **COT_URL**: (*optional*) Destination for Cursor-On-Target messages. See `PyTAK <https://github.com/ampledata/pytak#configuration-parameters>`_ for options.
+* **POLL_INTERVAL**: (*optional*) Period in seconds to poll a dump1090 HTTP aircraft.json feed.
 
 There are other configuration parameters available via `PyTAK <https://github.com/ampledata/pytak#configuration-parameters>`_.
 
