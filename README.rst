@@ -5,61 +5,61 @@ ADS-B to Cursor-On-Target Gateway.
    :alt: Screenshot of ADS-B PLI in ATAK.
    :target: https://github.com/ampledata/adsbxcot/blob/main/docs/Screenshot_20201026-142037_ATAK.jpg
 
-
-**IF YOU HAVE AN URGENT OPERATIONAL NEED**: Email ops@undef.net or sms+call +1-415-598-8226
-
-The ADSBCOT ADS-B to Cursor-On-Target Gateway transforms Automatic Dependent
+The ADS-B to Cursor-On-Target Gateway (ADSBCOT) transforms Automatic Dependent
 Surveillance-Broadcast (ADS-B) aircraft position information into Cursor On
 Target (COT) Position Location Information (PLI) for display on Situational
 Awareness (SA) applications such as the Android Team Awareness Kit (ATAK),
-WinTAK, RaptorX, TAKX, iTAK, et al.
+WinTAK, RaptorX, TAKX, iTAK, et al. 
 
-For more information on the TAK suite of tools, see: https://www.tak.gov/
+For more information on the TAK Product Center, see: https://www.tak.gov/
 
-ADS-B Data can be recevied from a dump1090 recevier using:
+ADS-B Data can be recevied from a dump1090 using:
 
-1. Aircraft JSON HTTP feed. See: https://github.com/flightaware/dump1090/blob/master/README-json.md
+1. Aircraft JSON HTTP feed. See `dump1090 README-json.md <https://github.com/flightaware/dump1090/blob/master/README-json.md>`_`.
 2. Raw TCP (via `pyModeS <https://github.com/junzis/pyModeS>`_)
 3. Beast TCP (via `pyModeS <https://github.com/junzis/pyModeS>`_)
 
-If you'd like to feed ADS-B from another source, consider these:
+If you'd like to feed ADS-B from another source, consider these tools:
 
-* `adsbxcot <https://github.com/ampledata/adsbxcot>`_: ADS-B Exchange to Cursor on Target (COT) Gateway. Transforms ADS-B position messages to CoT PLI Events.
-* `stratuxcot <https://github.com/ampledata/stratuxcot>`_: Stratux ADS-B to Cursor on Target (COT) Gateway. Transforms position messages to CoT PLI Events.
+* `adsbxcot <https://github.com/ampledata/adsbxcot>`_: ADSBExchange.com to COT Gateway. Transforms ADS-B position messages to CoT PLI Events.
+* `stratuxcot <https://github.com/ampledata/stratuxcot>`_: Stratux ADS-B to COT Gateway. Transforms position messages to CoT PLI Events.
 
-Support ADSBCOT Development
-===========================
 
-ADSBCOT has been developed for the Disaster Response, Public Safety and
+Support Development
+===================
+
+**Tech Support for this tool**: Email support@undef.net or Signal/WhatsApp: +1-310-621-9598
+
+This tool has been developed for the Disaster Response, Public Safety and
 Frontline Healthcare community. This software is currently provided at no-cost
 to users. Any contribution you can make to further this project's development
 efforts is greatly appreciated.
 
 .. image:: https://www.buymeacoffee.com/assets/img/custom_images/orange_img.png
     :target: https://www.buymeacoffee.com/ampledata
-    :alt: Support ADSBCOT development: Buy me a coffee!
+    :alt: Support Development: Buy me a coffee!
+
 
 Installation
 ============
 
-The ADS-B to Cursor on Target Gateway is provided by a command-line tool called
-`adsbcot`, which can be installed either from the Python Package Index, or
-directly from this source tree.
+Functionality is provided by a command-line tool called `adsbcot`, which can 
+be installed either from the Python Package Index, or directly from this 
+source tree.
 
-Install from the Python Package Index (PyPI)::
+**N.B.** To support direct network streaming (Raw & Beast) from a dump1090 
+receiver (e.g. piaware/skyaware), you must install `adsbcot` with the extra 
+`pymodes` package. HTTP support does not require the extra `pymodes` package.
+
+**Preferred** Install adsbcot from the Python Package Index (PyPI)::
 
     $ python3 -m pip install adsbcot
 
-
-To support direct network streaming (raw & beast) from dump1090, you must
-install the extra package `pyModeS <https://github.com/junzis/pyModeS>`_.
-
-To install with pyModeS support::
+**Optional** Install adsbcot from PyPI with the extra pymodes package::
 
     $ python3 -m pip install adsbcot[with_pymodes]
 
-
-Install from this source tree::
+**Alternate** Install adsbcot from the source repository::
 
     $ git clone https://github.com/ampledata/adsbcot.git
     $ cd adsbcot/
@@ -69,39 +69,63 @@ Install from this source tree::
 Usage
 =====
 
-The `adsbcot` command-line program has several runtime arguments::
+The `adsbcot` command-line program has 2 runtime arguments::
 
     usage: adsbcot [-h] [-c CONFIG_FILE]
 
     optional arguments:
     -h, --help            show this help message and exit
     -c CONFIG_FILE, --CONFIG_FILE CONFIG_FILE
-    
+                            Optional configuration file. Default: config.ini
+
+Configuration Parameters
+------------------------
+Configuration parameters can be specified either via environment variables or in
+a INI-stile configuration file, with the following priority:
+
+1. config.ini (if exists) or -c (if specified).
+2. Environment variables.
+3. Defaults.
+
+Parameters:
+
+* COT_URL: (optional) Destination for Cursor-On-Target messages. See `PyTAK <https://github.com/ampledata/pytak#configuration-parameters>`_ for options.
+* DUMP1090_URL: dump1090 source URL, one of: tcp+beast://, tcp+raw:// or http://
+* POLL_INTERVAL: (optional) Period in seconds to poll a dump1090 HTTP aircraft.json feed.
+
+There are other configuration parameters available via `PyTAK <https://github.com/ampledata/pytak#configuration-parameters>`_.
+
 
 Example config.ini
 ==================
 Connect to dump1090's Beast TCP running on host 172.17.2.122, port 30005 &
-forward CoT to host 172.17.2.152, port 8087 use following config.ini::
+forward COT to host 172.17.2.152, port 8087 use following config.ini::
 
     [adsbcot]
-    COT_URL = 172.17.2.152:8087
+    COT_URL = tcp://172.17.2.152:8087
     DUMP1090_URL = tcp+beast://172.17.2.122:30005
 
 Connect to dump1090's Raw TCP running on host 172.17.2.122, port 30002 &
-forward CoT to host 172.17.2.152, port 8087::
+forward COT to UDP Multicast Group 239.2.3.1 port 6969::
 
     [adsbcot]
-    COT_URL = 172.17.2.152:8087
+    COT_URL = udp://239.2.3.1:6969
     DUMP1090_URL = tcp+raw://172.17.2.122:30002
 
-
 Poll dump1090's JSON API at http://172.17.2.122:8080/data/aircraft.json with a
-10 second interval & forward CoT to host 172.17.2.152, port 8087::
+10 second interval & forward COT to host 172.17.2.152, port 8089 using TLS::
 
     [adsbcot]
-    COT_URL = 172.17.2.152:8087
-    DUMP1090_URL = thttp://172.17.2.122:8080/data/aircraft.json
+    PYTAK_TLS_CLIENT_CERT = /etc/my_client_cert.pem
+    COT_URL = tls://tak.example.com:8088
+    DUMP1090_URL = http://172.17.2.122:8080/data/aircraft.json
     POLL_INTERVAL = 10
+
+Use environment variables to set configuration parameters:
+
+    $ export COT_URL="udp://10.9.8.7:8087"
+    $ export DUMP1090_URL="tcp+raw://127.0.0.1:30002"
+    $ adsbcot
 
 
 Troubleshooting
@@ -109,11 +133,16 @@ Troubleshooting
 
 To report bugs, please set the DEBUG=1 environment variable to collect logs::
 
-    $ DEBUG=1 adsbcot -c config.ini
+    $ DEBUG=1 adsbcot
+    -or-
+    $ export DEBUG=1
+    $ adsbcot
+
 
 Source
 ======
 The source for adsbcot can be found on Github: https://github.com/ampledata/adsbcot
+
 
 Author
 ======
@@ -121,12 +150,14 @@ adsbcot is written and maintained by Greg Albrecht W2GMD oss@undef.net
 
 https://ampledata.org/
 
+
 Copyright
 =========
 adsbcot is Copyright 2022 Greg Albrecht
 
 `pyModeS <https://github.com/junzis/pyModeS>`_ is an optional extra package,
 and is Copyright (C) 2015 Junzi Sun (TU Delft).
+
 
 License
 =======

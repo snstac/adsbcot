@@ -61,7 +61,7 @@ setuptools.setup(
     zip_safe=False,
     include_package_data=True,
     install_requires=["aircot", "pytak >= 5.0.0", "aiohttp"],
-    extras_require={"with_pymodes": "pymodes==2.8"},
+    extras_require={"with_pymodes": "pymodes >= 2.8"},
     classifiers=[
         "Programming Language :: Python",
         "License :: OSI Approved :: Apache Software License",
