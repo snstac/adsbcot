@@ -1,15 +1,32 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
+#
+# Copyright 2022 Greg Albrecht <oss@undef.net>
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# Author:: Greg Albrecht W2GMD <oss@undef.net>
+# Copyright:: Copyright 2022 Greg Albrecht
+# License:: Apache License, Version 2.0
+#
 
-"""ADS-B Cursor-On-Target Class Definitions."""
-
+"""ADSBCOT Class Definitions."""
 
 import asyncio
 import logging
 
 import aiohttp
 import pytak
-
 import adsbcot
 
 # We won't use pyModeS if it isn't installed:
@@ -30,24 +47,15 @@ class ADSBWorker(pytak.MessageWorker):
 
     """Reads ADS-B Data from inputs, renders to CoT, and puts on queue."""
 
-    def __init__(  # pylint: disable=too-many-arguments
-        self,
-        event_queue,
-        url,
-        cot_stale,
-        poll_interval: int = None,
-        filters: dict = None,
-    ):
-        super().__init__(event_queue, url)
-        self.poll_interval: int = int(poll_interval or adsbcot.DEFAULT_POLL_INTERVAL)
-        self.url = url
-        self.cot_stale = cot_stale
-        self.filters = filters
-        self._logger.debug("cot_stale='%s'", self.cot_stale)
+    def __init__(self, event_queue, config):
+        super().__init__(event_queue)
+        _ = [x.setFormatter(adsbcot.LOG_FORMAT) for x in self._logger.handlers]
+        self.config = config
+        self.uid_key: str = self.config.get("UID_KEY", "ICAO")
 
     async def handle_message(self, aircraft: list) -> None:
         """
-        Transforms Aircraft AIS data to CoT and puts it onto tx queue.
+        Transforms Aircraft ADS-B data to CoT and puts it onto tx queue.
         """
         if not isinstance(aircraft, list):
             self._logger.warning("Invalid aircraft data, should be a Python list.")
@@ -61,23 +69,9 @@ class ADSBWorker(pytak.MessageWorker):
         for craft in aircraft:
             self._logger.debug("craft='%s'", craft)
 
-            if self.filters:
-                if "ICAO" in self.filters:
-                    icao = craft.get("hex", "").upper()
-                    if icao not in self.filters.get("ICAO", "include"):
-                        continue
-                    if icao in self.filters.get("ICAO", "exclude"):
-                        continue
-                elif "FLIGHT" in self.filters:
-                    flight = craft.get("flight", "").upper()
-                    if flight not in self.filters.get("FLIGHT", "include"):
-                        continue
-                    if flight in self.filters.get("FLIGHT", "exclude"):
-                        continue
-
-            event = adsbcot.adsb_to_cot(craft, stale=self.cot_stale)
+            event = adsbcot.adsb_to_cot(craft, self.config)
             if not event:
-                self._logger.debug("Empty CoT Event for craft=%s", craft)
+                self._logger.debug("Empty COT Event for craft=%s", craft)
                 i += 1
                 continue
 
@@ -93,40 +87,50 @@ class ADSBWorker(pytak.MessageWorker):
             await self._put_event_queue(event)
             i += 1
 
-    async def _get_dump1090_feed(self):
+    async def _get_dump1090_feed(self, url: str):
         """
         Polls the dump1090 JSON API and passes data to message handler.
         """
         async with aiohttp.ClientSession() as session:
-            resp = await session.request(method="GET", url=self.url.geturl())
+            resp = await session.request(method="GET", url=url)
             resp.raise_for_status()
 
             json_resp = await resp.json()
             aircraft = json_resp.get("aircraft")
-            self._logger.debug(
-                "Retrieved %s aircraft from %s", len(aircraft), self.url.geturl()
-            )
 
+            self._logger.info("Retrieved %s aircraft.", len(aircraft))
             await self.handle_message(aircraft)
 
     async def run(self, number_of_iterations=-1):
         """Runs this Thread, Reads from Pollers."""
-        self._logger.info("Running ADSBWorker with URL '%s'", self.url.geturl())
+        url: str = self.config.get("DUMP1090_URL")
+        poll_interval: int = int(
+            self.config.get("POLL_INTERVAL", adsbcot.DEFAULT_POLL_INTERVAL)
+        )
+
+        self._logger.info("Polling dump1090 from '%s' every %ss", url, poll_interval)
+        self._logger.info(
+            "Using UID_KEY=%s & COT_STALE=%ss",
+            self.uid_key,
+            self.config.get("COT_STALE"),
+        )
 
         while 1:
-            await self._get_dump1090_feed()
-            await asyncio.sleep(self.poll_interval)
+            await self._get_dump1090_feed(url)
+            await asyncio.sleep(poll_interval)
 
 
 class ADSBNetWorker(ADSBWorker):
     """Reads ADS-B Data from network, renders to COT, and puts on queue."""
 
     def __init__(
-        self, event_queue, net_queue, data_type, cot_stale, filters
+        self, event_queue, net_queue, data_type, config
     ):  # NOQA pylint: disable=too-many-arguments
-        super().__init__(event_queue, None, cot_stale, None, filters)
+        super().__init__(event_queue, config)
         self.net_queue = net_queue
         self.data_type = data_type
+        self.config = config
+
         self.local_buffer_adsb_msg = []
         self.local_buffer_adsb_ts = []
         self.local_buffer_commb_msg = []

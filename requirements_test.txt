@@ -1,12 +1,5 @@
-# ADSBCOT Python Distribution Package Requirements.
-#
-# Source:: https://github.com/ampledata/adsbcot
-# Author:: Greg Albrecht W2GMD <oss@undef.net>
-# Copyright:: Copyright 2022 Greg Albrecht
-# License:: Apache License, Version 2.0
-
-
-flake8
+pytest-asyncio
+pytest-cov
 pylint
-twine
+flake8
 black

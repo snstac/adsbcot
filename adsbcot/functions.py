@@ -1,32 +1,131 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
+#
+# Copyright 2022 Greg Albrecht <oss@undef.net>
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# Author:: Greg Albrecht W2GMD <oss@undef.net>
+# Copyright:: Copyright 2022 Greg Albrecht
+# License:: Apache License, Version 2.0
+#
 
-"""ADS-B Cursor-on-Target Gateway Functions."""
+"""ADSBCOT Functions."""
 
-import datetime
-import os
-import platform
-
+import asyncio
 import xml.etree.ElementTree as ET
+
+from configparser import ConfigParser
+from typing import Union, Set
+from urllib.parse import ParseResult, urlparse
 
 import aircot
 import pytak
-
 import adsbcot
+
 
 __author__ = "Greg Albrecht W2GMD <oss@undef.net>"
 __copyright__ = "Copyright 2022 Greg Albrecht"
 __license__ = "Apache License, Version 2.0"
 
 
-def adsb_to_cot_xml(  # pylint: disable=too-many-locals,too-many-statements
-    craft: dict, cot_type: str = None, stale: int = None
-) -> ET.Element:
+APP_NAME = "adsbcot"
+
+# We won't use pyModeS if it isn't installed:
+WITH_PYMODES = False
+try:
+    import pyModeS  # pylint: disable=unused-import
+
+    WITH_PYMODES = True
+except ImportError:
+    pass
+
+
+def create_tasks(
+    config: ConfigParser, clitool: pytak.CLITool
+) -> Set[pytak.Worker,]:
     """
-    Transforms a Dump1090 ADS-B Aircraft Object to a Cursor-on-Target PLI XML.
+    Creates specific coroutine task set for this application.
+
+    Parameters
+    ----------
+    config : `ConfigParser`
+        Configuration options & values.
+    clitool : `pytak.CLITool`
+        A PyTAK Worker class instance.
+
+    Returns
+    -------
+    `set`
+        Set of PyTAK Worker classes for this application.
     """
-    time = datetime.datetime.now(datetime.timezone.utc)
-    cot_stale = stale or adsbcot.DEFAULT_COT_STALE
+    tasks = set()
+    # Gateway code:
+    dump1090_url: ParseResult = urlparse(config.get("DUMP1090_URL"))
+
+    # ADS-B Workers (receivers):
+    if "http" in dump1090_url.scheme:
+        tasks.add(adsbcot.ADSBWorker(event_queue=clitool.tx_queue, config=config))
+    elif "tcp" in dump1090_url.scheme:
+        if not WITH_PYMODES:
+            print(f"ERROR from {APP_NAME}")
+            print(f"Please reinstall {APP_NAME} with pyModeS support: ")
+            print(f"$ python3 -m pip install {APP_NAME}[with_pymodes]")
+            print("Exiting...")
+            raise Exception
+
+        net_queue: asyncio.Queue = asyncio.Queue()
+
+        if "+" in dump1090_url.scheme:
+            _, data_type = dump1090_url.scheme.split("+")
+        else:
+            data_type = "raw"
+
+        tasks.add(adsbcot.ADSBNetReceiver(net_queue, dump1090_url, data_type))
+
+        tasks.add(
+            adsbcot.ADSBNetWorker(
+                event_queue=clitool.tx_queue,
+                net_queue=net_queue,
+                data_type=data_type,
+                config=config,
+            )
+        )
+
+    return tasks
+
+
+def adsb_to_cot_xml(
+    craft: dict, config: Union[dict, None] = None, known_craft: Union[dict, None] = None
+) -> Union[ET.Element, None]:
+    """
+    Serializes a Dump1090 ADS-B aircraft object as Cursor-on-Target XML.
+
+    Parameters
+    ----------
+    craft : `dict`
+        Key/Value data struct of decoded ADS-B aircraft data.
+    config : `configparser.ConfigParser`
+        Configuration options and values.
+        Uses config options: UID_KEY, COT_STALE, COT_HOST_ID
+
+    Returns
+    -------
+    `xml.etree.ElementTree.Element`
+        Cursor-On-Target XML ElementTree object.
+    """
+    known_craft: dict = known_craft or {}
+    config: dict = config or {}
 
     lat = craft.get("lat")
     lon = craft.get("lon")
@@ -34,19 +133,67 @@ def adsb_to_cot_xml(  # pylint: disable=too-many-locals,too-many-statements
     if lat is None or lon is None:
         return None
 
-    icao_hex = craft.get("hex", "").upper()
-    if not icao_hex:
+    remarks_fields = []
+
+    uid_key = config.get("UID_KEY", "ICAO")
+    cot_stale = int(config.get("COT_STALE", pytak.DEFAULT_COT_STALE))
+    cot_host_id = config.get("COT_HOST_ID", pytak.DEFAULT_HOST_ID)
+
+    aircotx = ET.Element("_aircot_")
+    aircotx.set("cot_host_id", cot_host_id)
+
+    icao_hex = craft.get("hex", "")
+    reg = craft.get("reg", "")
+    flight = craft.get("flight", "")
+    cat = craft.get("category")
+    squawk = craft.get("squawk")
+
+    if flight:
+        flight = flight.strip().upper()
+        remarks_fields.append(flight)
+        aircotx.set("flight", flight)
+
+    if reg:
+        reg = reg.strip().upper()
+        remarks_fields.append(reg)
+        aircotx.set("reg", reg)
+
+    if squawk:
+        squawk = squawk.strip().upper()
+        remarks_fields.append(f"Squawk: {squawk}")
+        aircotx.set("squawk", squawk)
+
+    if icao_hex:
+        icao_hex = icao_hex.strip().upper()
+        remarks_fields.append(icao_hex)
+        aircotx.set("icao", icao_hex)
+
+    if cat:
+        cat = cat.strip().upper()
+        remarks_fields.append(f"Cat.: {cat}")
+        aircotx.set("cat", cat)
+
+    if "REG" in uid_key and reg:
+        cot_uid = f"REG-{reg}"
+    elif "ICAO" in uid_key and icao_hex:
+        cot_uid = f"ICAO-{icao_hex}"
+    if "FLIGHT" in uid_key and flight:
+        cot_uid = f"FLIGHT-{flight}"
+    elif icao_hex:
+        cot_uid = f"ICAO-{icao_hex}"
+    elif flight:
+        cot_uid = f"FLIGHT-{flight}"
+    else:
         return None
 
-    name = f"ICAO-{icao_hex}"
-
-    flight = craft.get("flight", "").strip()
     if flight:
         callsign = flight
+    elif reg:
+        callsign = reg
     else:
         callsign = icao_hex
 
-    cot_type = aircot.adsb_to_cot_type(craft.get("hex"), craft.get("category"), flight)
+    cot_type = aircot.adsb_to_cot_type(craft.get("hex"), cat, flight)
 
     point: ET.Element = ET.Element("point")
     point.set("lat", str(lat))
@@ -63,7 +210,7 @@ def adsb_to_cot_xml(  # pylint: disable=too-many-locals,too-many-statements
         point.set("hae", "9999999.0")
 
     uid: ET.Element = ET.Element("UID")
-    uid.set("Droid", name)
+    uid.set("Droid", cot_uid)
 
     contact: ET.Element = ET.Element("contact")
     contact.set("callsign", callsign)
@@ -79,47 +226,39 @@ def adsb_to_cot_xml(  # pylint: disable=too-many-locals,too-many-statements
         track.set("speed", "9999999.0")
 
     detail = ET.Element("detail")
-    detail.set("uid", name)
+    detail.set("uid", cot_uid)
     detail.append(uid)
     detail.append(contact)
     detail.append(track)
 
     remarks = ET.Element("remarks")
-    _remarks = f"Squawk: {craft.get('squawk')} Category: {craft.get('category')}"
 
-    if flight:
-        _remarks = f"{icao_hex}({flight}) {_remarks}"
-    else:
-        _remarks = f"{icao_hex} {_remarks}"
+    remarks_fields.append(f"{cot_host_id}")
 
-    if bool(os.environ.get("DEBUG")):
-        _remarks = f"{_remarks} via (via adsbxcot@{platform.node()})"
+    _remarks = " ".join(list(filter(None, remarks_fields)))
 
-    detail.set("remarks", _remarks)
     remarks.text = _remarks
     detail.append(remarks)
 
     root = ET.Element("event")
     root.set("version", "2.0")
     root.set("type", cot_type)
-    root.set("uid", name)
+    root.set("uid", cot_uid)
     root.set("how", "m-g")
-    root.set("time", time.strftime(pytak.ISO_8601_UTC))
-    root.set("start", time.strftime(pytak.ISO_8601_UTC))
-    root.set(
-        "stale",
-        (time + datetime.timedelta(seconds=int(cot_stale))).strftime(
-            pytak.ISO_8601_UTC
-        ),
-    )
+    root.set("time", pytak.cot_time())
+    root.set("start", pytak.cot_time())
+    root.set("stale", pytak.cot_time(cot_stale))
+
     root.append(point)
     root.append(detail)
+    root.append(aircotx)
 
     return root
 
 
-def adsb_to_cot(craft: dict, cot_type: str = None, stale: int = None) -> bytes:
-    """
-    Transforms a Dump1090 ADS-B Aircraft Object to a Cursor-on-Target PLI String.
-    """
-    return ET.tostring(adsb_to_cot_xml(craft, cot_type, stale))
+def adsb_to_cot(
+    craft: dict, config: Union[dict, None] = None, known_craft: Union[dict, None] = None
+) -> Union[bytes, None]:
+    """Wrapper that returns COT as an XML string."""
+    cot: Union[ET.Element, None] = adsb_to_cot_xml(craft, config, known_craft)
+    return ET.tostring(cot) if cot else None
