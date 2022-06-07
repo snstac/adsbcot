@@ -6,16 +6,14 @@ ADS-B to Cursor-On-Target Gateway.
    :target: https://github.com/ampledata/adsbxcot/blob/main/docs/Screenshot_20201026-142037_ATAK.jpg
 
 The ADS-B to Cursor-On-Target Gateway (ADSBCOT) transforms Automatic Dependent
-Surveillance-Broadcast (ADS-B) aircraft position information into Cursor On
-Target (COT) Position Location Information (PLI) for display on Situational
-Awareness (SA) applications such as the Android Team Awareness Kit (ATAK),
-WinTAK, RaptorX, TAKX, iTAK, et al. 
+Surveillance-Broadcast aircraft position information into Cursor On Target 
+Position Location Information for display on Situational Awareness 
+applications such as the Android Team Awareness Kit (ATAK), WinTAK, RaptorX, 
+TAKX, iTAK, et al. For more information on TAK products, see: https://www.tak.gov/
 
-For more information on the TAK Product Center, see: https://www.tak.gov/
+ADS-B data can be recevied from dump1090 using the following network formats:
 
-ADS-B Data can be recevied from a dump1090 using:
-
-1. Aircraft JSON HTTP feed. See `dump1090 README-json.md <https://github.com/flightaware/dump1090/blob/master/README-json.md>`_`.
+1. Aircraft JSON HTTP feed. See `dump1090 README-json.md <https://github.com/flightaware/dump1090/blob/master/README-json.md>`_.
 2. Raw TCP (via `pyModeS <https://github.com/junzis/pyModeS>`_)
 3. Beast TCP (via `pyModeS <https://github.com/junzis/pyModeS>`_)
 
@@ -28,7 +26,7 @@ If you'd like to feed ADS-B from another source, consider these tools:
 Support Development
 ===================
 
-**Tech Support for this tool**: Email support@undef.net or Signal/WhatsApp: +1-310-621-9598
+**Tech Support**: Email support@undef.net or Signal/WhatsApp: +1-310-621-9598
 
 This tool has been developed for the Disaster Response, Public Safety and
 Frontline Healthcare community. This software is currently provided at no-cost
@@ -47,9 +45,9 @@ Functionality is provided by a command-line tool called `adsbcot`, which can
 be installed either from the Python Package Index, or directly from this 
 source tree.
 
-**N.B.** To support direct network streaming (Raw & Beast) from a dump1090 
-receiver (e.g. piaware/skyaware), you must install `adsbcot` with the extra 
-`pymodes` package. HTTP support does not require the extra `pymodes` package.
+To support direct network streaming (Raw & Beast) from a dump1090 receiver 
+(e.g. piaware/skyaware), you must install `adsbcot` with the extra `pymodes` 
+package. HTTP support does not require the extra `pymodes` package.
 
 **Preferred** Install adsbcot from the Python Package Index (PyPI)::
 
@@ -96,24 +94,26 @@ Parameters:
 There are other configuration parameters available via `PyTAK <https://github.com/ampledata/pytak#configuration-parameters>`_.
 
 
-Example config.ini
-==================
-Connect to dump1090's Beast TCP running on host 172.17.2.122, port 30005 &
-forward COT to host 172.17.2.152, port 8087 use following config.ini::
+Example Configurations
+======================
+
+**Example 1**: Connect to dump1090's Beast TCP running on host 172.17.2.122, 
+port 30005 & forward COT to host 172.17.2.152, port 8087 use following config.ini::
 
     [adsbcot]
     COT_URL = tcp://172.17.2.152:8087
     DUMP1090_URL = tcp+beast://172.17.2.122:30005
 
-Connect to dump1090's Raw TCP running on host 172.17.2.122, port 30002 &
-forward COT to UDP Multicast Group 239.2.3.1 port 6969::
+**Example 2**: Connect to dump1090's Raw TCP running on host 172.17.2.122, 
+port 30002 & forward COT to UDP Multicast Group 239.2.3.1 port 6969::
 
     [adsbcot]
     COT_URL = udp://239.2.3.1:6969
     DUMP1090_URL = tcp+raw://172.17.2.122:30002
 
-Poll dump1090's JSON API at http://172.17.2.122:8080/data/aircraft.json with a
-10 second interval & forward COT to host 172.17.2.152, port 8089 using TLS::
+**Example 3**: Poll dump1090's JSON API at 
+http://172.17.2.122:8080/data/aircraft.json with a 10 second interval & 
+forward COT to host 172.17.2.152, port 8089 using TLS::
 
     [adsbcot]
     PYTAK_TLS_CLIENT_CERT = /etc/my_client_cert.pem
@@ -121,7 +121,7 @@ Poll dump1090's JSON API at http://172.17.2.122:8080/data/aircraft.json with a
     DUMP1090_URL = http://172.17.2.122:8080/data/aircraft.json
     POLL_INTERVAL = 10
 
-Use environment variables to set configuration parameters:
+**Example 4**: Use environment variables to set configuration parameters::
 
     $ export COT_URL="udp://10.9.8.7:8087"
     $ export DUMP1090_URL="tcp+raw://127.0.0.1:30002"
@@ -134,7 +134,7 @@ Troubleshooting
 To report bugs, please set the DEBUG=1 environment variable to collect logs::
 
     $ DEBUG=1 adsbcot
-    -or-
+    $ # -OR-
     $ export DEBUG=1
     $ adsbcot
 
