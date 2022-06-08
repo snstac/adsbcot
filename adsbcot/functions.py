@@ -41,6 +41,7 @@ APP_NAME = "adsbcot"
 WITH_PYMODES = False
 try:
     import pyModeS  # NOQA pylint: disable=unused-import
+
     WITH_PYMODES = True
 except ImportError:
     pass
@@ -48,7 +49,7 @@ except ImportError:
 
 def create_tasks(
     config: ConfigParser, clitool: pytak.CLITool
-) -> Set[pytak.Worker, ]:
+) -> Set[pytak.Worker,]:
     """
     Creates specific coroutine task set for this application.
 
