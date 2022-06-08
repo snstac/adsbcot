@@ -40,7 +40,7 @@ APP_NAME = "adsbcot"
 # We won't use pyModeS if it isn't installed:
 WITH_PYMODES = False
 try:
-    import pyModeS  # NOQApylint: disable=unused-import
+    import pyModeS  # NOQA pylint: disable=unused-import
     WITH_PYMODES = True
 except ImportError:
     pass
@@ -94,7 +94,7 @@ def create_tasks(
     return tasks
 
 
-def adsb_to_cot_xml(
+def adsb_to_cot_xml(  # NOQA pylint: disable=too-many-locals,too-many-branches,too-many-statements
     craft: dict, config: Union[dict, None] = None, known_craft: Union[dict, None] = None
 ) -> Union[ET.Element, None]:
     """
