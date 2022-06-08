@@ -5,9 +5,7 @@
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-# http://www.apache.org/licenses/LICENSE-2.0
+# You may obtain a copy of the License at http://www.apache.org/licenses/LICENSE-2.0
 #
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
@@ -16,8 +14,6 @@
 # limitations under the License.
 #
 # Author:: Greg Albrecht W2GMD <oss@undef.net>
-# Copyright:: Copyright 2022 Greg Albrecht
-# License:: Apache License, Version 2.0
 #
 
 """ADSBCOT Class Definitions."""
@@ -43,30 +39,29 @@ __copyright__ = "Copyright 2022 Greg Albrecht"
 __license__ = "Apache License, Version 2.0"
 
 
-class ADSBWorker(pytak.MessageWorker):
+class ADSBWorker(pytak.QueueWorker):
 
     """Reads ADS-B Data from inputs, renders to CoT, and puts on queue."""
 
-    def __init__(self, event_queue, config):
-        super().__init__(event_queue)
+    def __init__(self, queue, config):
+        super().__init__(queue, config)
         _ = [x.setFormatter(adsbcot.LOG_FORMAT) for x in self._logger.handlers]
-        self.config = config
         self.uid_key: str = self.config.get("UID_KEY", "ICAO")
 
-    async def handle_message(self, aircraft: list) -> None:
+    async def handle_data(self, data: list) -> None:
         """
         Transforms Aircraft ADS-B data to CoT and puts it onto tx queue.
         """
-        if not isinstance(aircraft, list):
+        if not isinstance(data, list):
             self._logger.warning("Invalid aircraft data, should be a Python list.")
             return False
 
-        if not aircraft:
+        if not data:
             self._logger.warning("Empty aircraft list")
             return False
 
         i = 1
-        for craft in aircraft:
+        for craft in data:
             self._logger.debug("craft='%s'", craft)
 
             event = adsbcot.adsb_to_cot(craft, self.config)
@@ -78,16 +73,16 @@ class ADSBWorker(pytak.MessageWorker):
             self._logger.debug(
                 "Handling %s/%s ICAO: %s Flight: %s Category: %s Registration: %s",
                 i,
-                len(aircraft),
+                len(data),
                 craft.get("hex"),
                 craft.get("flight"),
                 craft.get("category"),
                 craft.get("reg"),
             )
-            await self._put_event_queue(event)
+            await self.put_queue(event)
             i += 1
 
-    async def _get_dump1090_feed(self, url: str):
+    async def get_dump1090_feed(self, url: str):
         """
         Polls the dump1090 JSON API and passes data to message handler.
         """
@@ -96,10 +91,10 @@ class ADSBWorker(pytak.MessageWorker):
             resp.raise_for_status()
 
             json_resp = await resp.json()
-            aircraft = json_resp.get("aircraft")
+            data = json_resp.get("aircraft")
 
-            self._logger.info("Retrieved %s aircraft.", len(aircraft))
-            await self.handle_message(aircraft)
+            self._logger.info("Retrieved %s aircraft messages.", len(data))
+            await self.handle_data(data)
 
     async def run(self, number_of_iterations=-1):
         """Runs this Thread, Reads from Pollers."""
@@ -108,7 +103,6 @@ class ADSBWorker(pytak.MessageWorker):
             self.config.get("POLL_INTERVAL", adsbcot.DEFAULT_POLL_INTERVAL)
         )
 
-        self._logger.info("Polling dump1090 from '%s' every %ss", url, poll_interval)
         self._logger.info(
             "Using UID_KEY=%s & COT_STALE=%ss",
             self.uid_key,
@@ -116,7 +110,8 @@ class ADSBWorker(pytak.MessageWorker):
         )
 
         while 1:
-            await self._get_dump1090_feed(url)
+            self._logger.info("Polling every %ss: %s", url, poll_interval)
+            await self.get_dump1090_feed(url)
             await asyncio.sleep(poll_interval)
 
 
@@ -124,12 +119,12 @@ class ADSBNetWorker(ADSBWorker):
     """Reads ADS-B Data from network, renders to COT, and puts on queue."""
 
     def __init__(
-        self, event_queue, net_queue, data_type, config
+        self, queue, net_queue, config, data_type
     ):  # NOQA pylint: disable=too-many-arguments
-        super().__init__(event_queue, config)
+        super().__init__(queue, config)
         self.net_queue = net_queue
-        self.data_type = data_type
         self.config = config
+        self.data_type = data_type
 
         self.local_buffer_adsb_msg = []
         self.local_buffer_adsb_ts = []
@@ -216,8 +211,11 @@ class ADSBNetWorker(ADSBWorker):
                 gnds = val.get("gs")
                 reg = val.get("r")
                 trk = val.get("trk")
-                if lat and lon and flight and alt_geom and gnds and trk:
-                    aircraft = [
+                # FIXME: Convert this to a filter()
+                if (  # pylint: disable=too-many-boolean-expressions
+                    lat and lon and flight and alt_geom and gnds and trk
+                ):
+                    data = [
                         {
                             "hex": key,
                             "lat": lat,
@@ -229,7 +227,7 @@ class ADSBNetWorker(ADSBWorker):
                             "trk": trk,
                         }
                     ]
-                    await self.handle_message(aircraft)
+                    await self.handle_data(data)
                 else:
                     continue
 
@@ -247,14 +245,18 @@ class ADSBNetReceiver:  # pylint: disable=too-few-public-methods
         _logger.propagate = False
     logging.getLogger("asyncio").setLevel(adsbcot.LOG_LEVEL)
 
-    def __init__(self, net_queue, url, data_type):
-        self.net_queue = net_queue
+    def __init__(self, queue, config, url, data_type):
+        self.queue = queue
+        self.config = config
         self.url = url
         self.data_type = data_type
 
+        if self.config.getboolean("DEBUG", False):
+            _ = [x.setLevel(logging.DEBUG) for x in self._logger.handlers]
+
     async def run(self):
         """Runs the main process loop."""
-        self._logger.info("Running ADSBNetReceiver for URL=%s", self.url.geturl())
+        self._logger.info("Running %s for %s", self.__class__, self.url.geturl())
 
         if ":" in self.url.path:
             host, port = self.url.path.split(":")
@@ -274,8 +276,8 @@ class ADSBNetReceiver:  # pylint: disable=too-few-public-methods
         if self.data_type == "raw":
             while 1:
                 received = await reader.readline()
-                self.net_queue.put_nowait(received)
+                self.queue.put_nowait(received)
         elif self.data_type == "beast":
             while 1:
                 received = await reader.read(4096)
-                self.net_queue.put_nowait(received)
+                self.queue.put_nowait(received)

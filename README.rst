@@ -45,13 +45,14 @@ Functionality is provided by a command-line tool called `adsbcot`, which can
 be installed either from the Python Package Index, or directly from this 
 source tree.
 
-To support direct network streaming (Raw & Beast) from a dump1090 receiver 
-(e.g. piaware/skyaware), you must install `adsbcot` with the extra `pymodes` 
-package. HTTP support does not require the extra `pymodes` package.
+To install with HTTP support only:
 
 **Preferred** Install adsbcot from the Python Package Index (PyPI)::
 
     $ python3 -m pip install adsbcot
+
+To install with TCP Beast & TCP Raw support you must install `adsbcot` with 
+the extra `pymodes` package:
 
 **Optional** Install adsbcot from PyPI with the extra pymodes package::
 
@@ -79,11 +80,7 @@ The `adsbcot` command-line program has 2 runtime arguments::
 Configuration Parameters
 ------------------------
 Configuration parameters can be specified either via environment variables or in
-a INI-stile configuration file, with the following priority:
-
-1. config.ini (if exists) or -c (if specified).
-2. Environment variables.
-3. Defaults.
+a INI-stile configuration file.
 
 Parameters:
 
@@ -92,6 +89,12 @@ Parameters:
 * **POLL_INTERVAL**: (*optional*) Period in seconds to poll a dump1090 HTTP aircraft.json feed.
 
 There are other configuration parameters available via `PyTAK <https://github.com/ampledata/pytak#configuration-parameters>`_.
+
+Configuration parameters are imported in the following priority order::
+
+1. config.ini (if exists) or -c <filename> (if specified).
+2. Environment Variables (if set).
+3. Defaults.
 
 
 Example Configurations

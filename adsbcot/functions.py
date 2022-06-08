@@ -5,9 +5,7 @@
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-# http://www.apache.org/licenses/LICENSE-2.0
+# You may obtain a copy of the License at http://www.apache.org/licenses/LICENSE-2.0
 #
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
@@ -16,8 +14,6 @@
 # limitations under the License.
 #
 # Author:: Greg Albrecht W2GMD <oss@undef.net>
-# Copyright:: Copyright 2022 Greg Albrecht
-# License:: Apache License, Version 2.0
 #
 
 """ADSBCOT Functions."""
@@ -44,8 +40,7 @@ APP_NAME = "adsbcot"
 # We won't use pyModeS if it isn't installed:
 WITH_PYMODES = False
 try:
-    import pyModeS  # pylint: disable=unused-import
-
+    import pyModeS  # NOQApylint: disable=unused-import
     WITH_PYMODES = True
 except ImportError:
     pass
@@ -53,7 +48,7 @@ except ImportError:
 
 def create_tasks(
     config: ConfigParser, clitool: pytak.CLITool
-) -> Set[pytak.Worker,]:
+) -> Set[pytak.Worker, ]:
     """
     Creates specific coroutine task set for this application.
 
@@ -70,12 +65,13 @@ def create_tasks(
         Set of PyTAK Worker classes for this application.
     """
     tasks = set()
+
     # Gateway code:
     dump1090_url: ParseResult = urlparse(config.get("DUMP1090_URL"))
 
     # ADS-B Workers (receivers):
     if "http" in dump1090_url.scheme:
-        tasks.add(adsbcot.ADSBWorker(event_queue=clitool.tx_queue, config=config))
+        tasks.add(adsbcot.ADSBWorker(clitool.tx_queue, config))
     elif "tcp" in dump1090_url.scheme:
         if not WITH_PYMODES:
             print(f"ERROR from {APP_NAME}")
@@ -91,16 +87,9 @@ def create_tasks(
         else:
             data_type = "raw"
 
-        tasks.add(adsbcot.ADSBNetReceiver(net_queue, dump1090_url, data_type))
+        tasks.add(adsbcot.ADSBNetReceiver(net_queue, config, dump1090_url, data_type))
 
-        tasks.add(
-            adsbcot.ADSBNetWorker(
-                event_queue=clitool.tx_queue,
-                net_queue=net_queue,
-                data_type=data_type,
-                config=config,
-            )
-        )
+        tasks.add(adsbcot.ADSBNetWorker(clitool.tx_queue, net_queue, config, data_type))
 
     return tasks
 
