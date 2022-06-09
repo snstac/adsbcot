@@ -17,6 +17,10 @@ ADS-B data can be recevied from dump1090 using the following network formats:
 2. Raw TCP (via `pyModeS <https://github.com/junzis/pyModeS>`_)
 3. Beast TCP (via `pyModeS <https://github.com/junzis/pyModeS>`_)
 
+.. image:: https://raw.githubusercontent.com/ampledata/adsbxcot/main/docs/adsbcot_operation.png
+   :alt: ADSBCOT Operation Diagram.
+   :target: https://github.com/ampledata/adsbxcot/blob/main/docs/adsbcot_operation.png
+
 If you'd like to feed ADS-B from another source, consider these tools:
 
 * `adsbxcot <https://github.com/ampledata/adsbxcot>`_: ADSBExchange.com to COT Gateway. Transforms ADS-B position messages to CoT PLI Events.
@@ -106,6 +110,10 @@ port 30005 & forward COT to host 172.17.2.152, port 8087 use following config.in
     [adsbcot]
     COT_URL = tcp://172.17.2.152:8087
     DUMP1090_URL = tcp+beast://172.17.2.122:30005
+
+.. image:: https://raw.githubusercontent.com/ampledata/adsbxcot/main/docs/adsbcot_example.png
+   :alt: ADSBCOT Example Setup.
+   :target: https://github.com/ampledata/adsbxcot/blob/main/docs/adsbcot_example.png
 
 **Example 2**: Connect to dump1090's Raw TCP running on host 172.17.2.122, 
 port 30002 & forward COT to UDP Multicast Group 239.2.3.1 port 6969::
