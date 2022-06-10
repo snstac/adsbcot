@@ -2,7 +2,7 @@ ADS-B to Cursor-On-Target Gateway.
 **********************************
 
 .. image:: https://raw.githubusercontent.com/ampledata/adsbxcot/main/docs/Screenshot_20201026-142037_ATAK-25p.jpg
-   :alt: Screenshot of ADS-B PLI in ATAK.
+   :alt: Screenshot of ADS-B in ATAK.
    :target: https://github.com/ampledata/adsbxcot/blob/main/docs/Screenshot_20201026-142037_ATAK.jpg
 
 The ADS-B to Cursor-On-Target Gateway (ADSBCOT) transforms Automatic Dependent
@@ -49,20 +49,21 @@ Functionality is provided by a command-line tool called `adsbcot`, which can
 be installed either from the Python Package Index, or directly from this 
 source tree.
 
-To install with HTTP support only:
+**To install with HTTP support ONLY:**
 
-**Preferred** Install adsbcot from the Python Package Index (PyPI)::
+Install adsbcot from the Python Package Index (PyPI)::
 
     $ python3 -m pip install adsbcot
 
-To install with TCP Beast & TCP Raw support you must install `adsbcot` with 
-the extra `pymodes` package:
+**To install with TCP Beast & TCP Raw support:**
 
-**Optional** Install adsbcot from PyPI with the extra pymodes package::
+You must install `adsbcot` with the extra `pymodes` package:
 
     $ python3 -m pip install adsbcot[with_pymodes]
 
-**Alternate** Install adsbcot from the source repository::
+**Alternate / Developers** 
+
+Install adsbcot from the source repository::
 
     $ git clone https://github.com/ampledata/adsbcot.git
     $ cd adsbcot/
@@ -164,15 +165,24 @@ https://ampledata.org/
 
 Copyright
 =========
-adsbcot is Copyright 2022 Greg Albrecht
 
-`pyModeS <https://github.com/junzis/pyModeS>`_ is an optional extra package,
-and is Copyright (C) 2015 Junzi Sun (TU Delft).
+* adsbcot is Copyright 2022 Greg Albrecht
+* `pyModeS <https://github.com/junzis/pyModeS>`_ is an optional extra package, and is Copyright (C) 2015 Junzi Sun (TU Delft).
 
 
 License
 =======
-adsbcot is licensed under the Apache License, Version 2.0. See LICENSE for details.
 
-`pyModeS <https://github.com/junzis/pyModeS>`_ is an optional extra package,
-and is licensed under the GNU General Public License v3.0.
+Copyright 2022 Greg Albrecht <oss@undef.net>
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+
+* `pyModeS <https://github.com/junzis/pyModeS>`_ is an optional extra package, and is licensed under the GNU General Public License v3.0.

@@ -21,7 +21,7 @@
 import asyncio
 import xml.etree.ElementTree as ET
 
-from configparser import ConfigParser
+from configparser import SectionProxy
 from typing import Union, Set
 from urllib.parse import ParseResult, urlparse
 
@@ -48,14 +48,14 @@ except ImportError:
 
 
 def create_tasks(
-    config: ConfigParser, clitool: pytak.CLITool
-) -> Set[pytak.Worker, ]:
+    config: SectionProxy, clitool: pytak.CLITool
+) -> Set[pytak.Worker,]:
     """
     Creates specific coroutine task set for this application.
 
     Parameters
     ----------
-    config : `ConfigParser`
+    config : `SectionProxy`
         Configuration options & values.
     clitool : `pytak.CLITool`
         A PyTAK Worker class instance.
@@ -66,6 +66,15 @@ def create_tasks(
         Set of PyTAK Worker classes for this application.
     """
     tasks = set()
+
+    _dump1090_url: str = config.get("DUMP1090_URL", adsbcot.DEFAULT_DUMP1090_URL)
+    config.setdefault("DUMP1090_URL", _dump1090_url)
+
+    if "://" not in config.get("DUMP1090_URL"):
+        raise Exception(
+            "Please specify DUMP1090_URL with full URL, including '://', for "
+            "example: tcp+beast://example.com:30005"
+        )
 
     # Gateway code:
     dump1090_url: ParseResult = urlparse(config.get("DUMP1090_URL"))
@@ -88,7 +97,7 @@ def create_tasks(
         else:
             data_type = "raw"
 
-        tasks.add(adsbcot.ADSBNetReceiver(net_queue, config, dump1090_url, data_type))
+        tasks.add(adsbcot.ADSBNetReceiver(net_queue, config, data_type))
 
         tasks.add(adsbcot.ADSBNetWorker(clitool.tx_queue, net_queue, config, data_type))
 

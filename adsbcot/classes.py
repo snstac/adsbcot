@@ -19,7 +19,8 @@
 """ADSBCOT Class Definitions."""
 
 import asyncio
-import logging
+
+from urllib.parse import ParseResult, urlparse
 
 import aiohttp
 import pytak
@@ -142,7 +143,9 @@ class ADSBNetWorker(ADSBWorker):
         self, number_of_iterations=-1
     ):  # NOQA pylint: disable=too-many-locals, too-many-branches
         """Runs the main process loop."""
-        self._logger.info("Running ADSBNetWorker for data_type='%s'", self.data_type)
+        self._logger.info(
+            "Running %s for data_type: %s", self.__class__, self.data_type
+        )
 
         self._reset_local_buffer()
 
@@ -232,36 +235,24 @@ class ADSBNetWorker(ADSBWorker):
                     continue
 
 
-class ADSBNetReceiver:  # pylint: disable=too-few-public-methods
+class ADSBNetReceiver(pytak.QueueWorker):  # pylint: disable=too-few-public-methods
     """Reads ADS-B Data from network and puts on queue."""
 
-    _logger = logging.getLogger(__name__)
-    if not _logger.handlers:
-        _logger.setLevel(adsbcot.LOG_LEVEL)
-        _console_handler = logging.StreamHandler()
-        _console_handler.setLevel(adsbcot.LOG_LEVEL)
-        _console_handler.setFormatter(adsbcot.LOG_FORMAT)
-        _logger.addHandler(_console_handler)
-        _logger.propagate = False
-    logging.getLogger("asyncio").setLevel(adsbcot.LOG_LEVEL)
-
-    def __init__(self, queue, config, url, data_type):
-        self.queue = queue
-        self.config = config
-        self.url = url
+    def __init__(self, queue, config, data_type):
+        super().__init__(queue, config)
         self.data_type = data_type
+        _ = [x.setFormatter(adsbcot.LOG_FORMAT) for x in self._logger.handlers]
 
-        if self.config.getboolean("DEBUG", False):
-            _ = [x.setLevel(logging.DEBUG) for x in self._logger.handlers]
-
-    async def run(self):
+    async def run(self, number_of_iterations=-1):
         """Runs the main process loop."""
-        self._logger.info("Running %s for %s", self.__class__, self.url.geturl())
+        url: ParseResult = urlparse(self.config.get("DUMP1090_URL"))
 
-        if ":" in self.url.path:
-            host, port = self.url.path.split(":")
+        self._logger.info("Running %s for %s", self.__class__, url.geturl())
+
+        if ":" in url.netloc:
+            host, port = url.netloc.split(":")
         else:
-            host = self.url.path
+            host = url.netloc
             if self.data_type == "raw":
                 port = adsbcot.DEFAULT_DUMP1090_TCP_RAW_PORT
             elif self.data_type == "beast":

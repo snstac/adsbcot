@@ -32,6 +32,7 @@ from .constants import (  # NOQA
     DEFAULT_POLL_INTERVAL,
     DEFAULT_DUMP1090_TCP_RAW_PORT,
     DEFAULT_DUMP1090_TCP_BEAST_PORT,
+    DEFAULT_DUMP1090_URL,
 )
 
 from .functions import adsb_to_cot, create_tasks  # NOQA
