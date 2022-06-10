@@ -89,7 +89,7 @@ a INI-stile configuration file.
 
 Parameters:
 
-* **DUMP1090_URL**: dump1090 source URL, one of: tcp+beast://, tcp+raw:// or http://
+* **DUMP1090_URL**: (*optional*) dump1090 source URL, one of: tcp+beast://, tcp+raw:// or http://. Default: tcp+beast://piaware.local:30005 
 * **COT_URL**: (*optional*) Destination for Cursor-On-Target messages. See `PyTAK <https://github.com/ampledata/pytak#configuration-parameters>`_ for options.
 * **POLL_INTERVAL**: (*optional*) Period in seconds to poll a dump1090 HTTP aircraft.json feed.
 
