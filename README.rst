@@ -57,7 +57,7 @@ Install adsbcot from the Python Package Index (PyPI)::
 
 **To install with TCP Beast & TCP Raw support:**
 
-You must install `adsbcot` with the extra `pymodes` package:
+You must install `adsbcot` with the extra `pymodes` package::
 
     $ python3 -m pip install adsbcot[with_pymodes]
 
@@ -95,7 +95,7 @@ Parameters:
 
 There are other configuration parameters available via `PyTAK <https://github.com/ampledata/pytak#configuration-parameters>`_.
 
-Configuration parameters are imported in the following priority order::
+Configuration parameters are imported in the following priority order:
 
 1. config.ini (if exists) or -c <filename> (if specified).
 2. Environment Variables (if set).

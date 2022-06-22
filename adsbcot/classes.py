@@ -20,10 +20,12 @@
 
 import asyncio
 
+from typing import Union
 from urllib.parse import ParseResult, urlparse
 
 import aiohttp
 import pytak
+import aircot
 import adsbcot
 
 # We won't use pyModeS if it isn't installed:
@@ -42,78 +44,120 @@ __license__ = "Apache License, Version 2.0"
 
 class ADSBWorker(pytak.QueueWorker):
 
-    """Reads ADS-B Data from inputs, renders to CoT, and puts on queue."""
+    """Reads ADS-B Data from inputs, serializes to COT, and puts on TX queue."""
 
     def __init__(self, queue, config):
         super().__init__(queue, config)
-        _ = [x.setFormatter(adsbcot.LOG_FORMAT) for x in self._logger.handlers]
+        self.known_craft_db = None
+        self.session = None
         self.uid_key: str = self.config.get("UID_KEY", "ICAO")
+
+        known_craft = self.config.get("KNOWN_CRAFT")
+        if known_craft:
+            self._logger.info("Using KNOWN_CRAFT: %s", known_craft)
+            self.known_craft_db = aircot.read_known_craft(known_craft)
 
     async def handle_data(self, data: list) -> None:
         """
-        Transforms Aircraft ADS-B data to CoT and puts it onto tx queue.
+        Handle Data from ADS-B receiver: Render to COT, put on TX queue.
+
+        Parameters
+        ----------
+        data : `list[dict, ]`
+            List of craft data as key/value arrays.
         """
         if not isinstance(data, list):
-            self._logger.warning("Invalid aircraft data, should be a Python list.")
-            return False
+            self._logger.warning("Invalid aircraft data, should be a Python `list`.")
+            return
 
         if not data:
             self._logger.warning("Empty aircraft list")
-            return False
+            return
 
+        lod = len(data)
         i = 1
         for craft in data:
-            self._logger.debug("craft='%s'", craft)
-
-            event = adsbcot.adsb_to_cot(craft, self.config)
-            if not event:
-                self._logger.debug("Empty COT Event for craft=%s", craft)
-                i += 1
+            i += 1
+            if not isinstance(craft, dict):
+                self._logger.warning("Aircraft list item was not a Python `dict`.")
                 continue
 
-            self._logger.debug(
-                "Handling %s/%s ICAO: %s Flight: %s Category: %s Registration: %s",
-                i,
-                len(data),
-                craft.get("hex"),
-                craft.get("flight"),
-                craft.get("category"),
-                craft.get("reg"),
+            icao: str = craft.get("hex", "")
+            if icao:
+                icao = icao.strip().upper()
+            else:
+                continue
+
+            if "~" in icao and not self.config.getboolean("INCLUDE_TISB"):
+                continue
+
+            known_craft: dict = aircot.get_known_craft(self.known_craft_db, icao, "HEX")
+
+            # Skip if we're using known_craft CSV and this Craft isn't found:
+            if (
+                self.known_craft_db
+                and not known_craft
+                and not self.config.getboolean("INCLUDE_ALL_CRAFT")
+            ):
+                continue
+
+            event: Union[str, None] = adsbcot.adsb_to_cot(
+                craft, self.config, known_craft
             )
+
+            if not event:
+                self._logger.debug("Empty COT Event for craft=%s", craft)
+                continue
+
+            self._logger.debug("Handling %s/%s ICAO: %s", i, lod, icao)
             await self.put_queue(event)
-            i += 1
 
     async def get_dump1090_feed(self, url: str):
         """
-        Polls the dump1090 JSON API and passes data to message handler.
+        Polls the dump1090 JSON API and passes data to data handler.
         """
-        async with aiohttp.ClientSession() as session:
-            resp = await session.request(method="GET", url=url)
-            resp.raise_for_status()
+        async with self.session.get(url) as resp:
+            if resp.status != 200:
+                response_content = await resp.text()
+                self._logger.error("Received HTTP Status %s for %s", resp.status, url)
+                self._logger.error(response_content)
+                return
 
             json_resp = await resp.json()
-            data = json_resp.get("aircraft")
+            if json_resp == None:
+                return
 
-            self._logger.info("Retrieved %s aircraft messages.", len(data))
+            data = json_resp.get("aircraft")
+            if data == None:
+                return
+
+            self._logger.info("Retrieved %s aircraft messages.", str(len(data) or "No"))
             await self.handle_data(data)
 
     async def run(self, number_of_iterations=-1):
         """Runs this Thread, Reads from Pollers."""
-        url: str = self.config.get("DUMP1090_URL")
-        poll_interval: int = int(
-            self.config.get("POLL_INTERVAL", adsbcot.DEFAULT_POLL_INTERVAL)
+        url: str = self.config.get("DUMP1090_URL", "")
+        if not url:
+            raise Exception("Please specify a DUMP1090_URL.")
+
+        self._logger.info("Running %s", self.__class__)
+
+        known_craft: str = self.config.get("KNOWN_CRAFT", "")
+        poll_interval: str = self.config.get(
+            "POLL_INTERVAL", adsbcot.DEFAULT_POLL_INTERVAL
         )
 
-        self._logger.info(
-            "Using UID_KEY=%s & COT_STALE=%ss",
-            self.uid_key,
-            self.config.get("COT_STALE"),
-        )
+        if known_craft:
+            self._logger.info("Using KNOWN_CRAFT: %s", known_craft)
+            self.known_craft_db = aircot.read_known_craft(known_craft)
 
-        while 1:
-            self._logger.info("Polling every %ss: %s", url, poll_interval)
-            await self.get_dump1090_feed(url)
-            await asyncio.sleep(poll_interval)
+        async with aiohttp.ClientSession() as self.session:
+            while 1:
+                self._logger.info(
+                    "%s polling every %ss: %s", self.__class__, poll_interval, url
+                )
+                await self.get_dump1090_feed(url)
+                await asyncio.sleep(int(poll_interval))
 
 
 class ADSBNetWorker(ADSBWorker):
@@ -240,8 +284,7 @@ class ADSBNetReceiver(pytak.QueueWorker):  # pylint: disable=too-few-public-meth
 
     def __init__(self, queue, config, data_type):
         super().__init__(queue, config)
-        self.data_type = data_type
-        _ = [x.setFormatter(adsbcot.LOG_FORMAT) for x in self._logger.handlers]
+        self.data_type: str = data_type
 
     async def run(self, number_of_iterations=-1):
         """Runs the main process loop."""

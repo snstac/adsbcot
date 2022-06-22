@@ -27,8 +27,6 @@ ADS-B Cursor-On-Target Gateway.
 """
 
 from .constants import (  # NOQA
-    LOG_FORMAT,
-    LOG_LEVEL,
     DEFAULT_POLL_INTERVAL,
     DEFAULT_DUMP1090_TCP_RAW_PORT,
     DEFAULT_DUMP1090_TCP_BEAST_PORT,

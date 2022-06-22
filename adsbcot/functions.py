@@ -105,7 +105,9 @@ def create_tasks(
 
 
 def adsb_to_cot_xml(  # NOQA pylint: disable=too-many-locals,too-many-branches,too-many-statements
-    craft: dict, config: Union[dict, None] = None, known_craft: Union[dict, None] = None
+    craft: dict,
+    config: Union[SectionProxy, None] = None,
+    known_craft: Union[dict, None] = None,
 ) -> Union[ET.Element, None]:
     """
     Serializes a Dump1090 ADS-B aircraft object as Cursor-on-Target XML.
@@ -114,7 +116,7 @@ def adsb_to_cot_xml(  # NOQA pylint: disable=too-many-locals,too-many-branches,t
     ----------
     craft : `dict`
         Key/Value data struct of decoded ADS-B aircraft data.
-    config : `configparser.ConfigParser`
+    config : `configparser.SectionProxy`
         Configuration options and values.
         Uses config options: UID_KEY, COT_STALE, COT_HOST_ID
 
@@ -123,15 +125,14 @@ def adsb_to_cot_xml(  # NOQA pylint: disable=too-many-locals,too-many-branches,t
     `xml.etree.ElementTree.Element`
         Cursor-On-Target XML ElementTree object.
     """
-    known_craft: dict = known_craft or {}
-    config: dict = config or {}
-
     lat = craft.get("lat")
     lon = craft.get("lon")
 
     if lat is None or lon is None:
         return None
 
+    known_craft: dict = known_craft or {}
+    config: dict = config or {}
     remarks_fields = []
 
     uid_key = config.get("UID_KEY", "ICAO")
@@ -192,7 +193,9 @@ def adsb_to_cot_xml(  # NOQA pylint: disable=too-many-locals,too-many-branches,t
     else:
         callsign = icao_hex
 
-    cot_type = aircot.adsb_to_cot_type(craft.get("hex"), cat, flight)
+    _, callsign = aircot.set_name_callsign(icao_hex, reg, None, flight, known_craft)
+    cat = aircot.set_category(cat, known_craft)
+    cot_type = aircot.set_cot_type(icao_hex, cat, flight, known_craft)
 
     point: ET.Element = ET.Element("point")
     point.set("lat", str(lat))
@@ -256,7 +259,9 @@ def adsb_to_cot_xml(  # NOQA pylint: disable=too-many-locals,too-many-branches,t
 
 
 def adsb_to_cot(
-    craft: dict, config: Union[dict, None] = None, known_craft: Union[dict, None] = None
+    craft: dict,
+    config: Union[SectionProxy, None] = None,
+    known_craft: Union[dict, None] = None,
 ) -> Union[bytes, None]:
     """Wrapper that returns COT as an XML string."""
     cot: Union[ET.Element, None] = adsb_to_cot_xml(craft, config, known_craft)

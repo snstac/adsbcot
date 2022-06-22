@@ -26,23 +26,12 @@ __copyright__ = "Copyright 2022 Greg Albrecht"
 __license__ = "Apache License, Version 2.0"
 
 
-if os.getenv("DEBUG"):
-    LOG_LEVEL = logging.DEBUG
-    LOG_FORMAT = logging.Formatter(
-        (
-            "%(asctime)s adsbcot %(levelname)s %(name)s.%(funcName)s:%(lineno)d "
-            " - %(message)s"
-        )
-    )
-    logging.debug("adsbcot Debugging Enabled via DEBUG Environment Variable.")
-else:
-    LOG_LEVEL = logging.INFO
-    LOG_FORMAT = logging.Formatter(("%(asctime)s adsbcot %(levelname)s - %(message)s"))
+# Dump1090 URL to use out of the box, in this case the HTTP JSON feed URL.
+DEFAULT_DUMP1090_URL: str = "http://piaware.local:8080/data/aircraft.json"
 
-DEFAULT_POLL_INTERVAL: int = 30
+# Default dump1090 HTTP JSON feed polling interval, in seconds.
+DEFAULT_POLL_INTERVAL: str = "3"
 
+# Default non-HTTP TCP ports for dump1090, raw & beast.
 DEFAULT_DUMP1090_TCP_RAW_PORT: int = 30002
 DEFAULT_DUMP1090_TCP_BEAST_PORT: int = 30005
-DEFAULT_DUMP1090_URL: str = (
-    f"tcp+beast://piaware.local:{DEFAULT_DUMP1090_TCP_BEAST_PORT}"
-)
