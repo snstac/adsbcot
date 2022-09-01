@@ -1,15 +1,13 @@
-ADS-B to Cursor-On-Target Gateway.
-**********************************
+ADS-B to Cursor-On-Target Gateway
+*********************************
 
 .. image:: https://raw.githubusercontent.com/ampledata/adsbxcot/main/docs/Screenshot_20201026-142037_ATAK-25p.jpg
    :alt: Screenshot of ADS-B in ATAK.
    :target: https://github.com/ampledata/adsbxcot/blob/main/docs/Screenshot_20201026-142037_ATAK.jpg
 
-The ADS-B to Cursor-On-Target Gateway (ADSBCOT) transforms Automatic Dependent
-Surveillance-Broadcast aircraft position information into Cursor On Target 
-Position Location Information for display on Situational Awareness 
-applications such as the Android Team Awareness Kit (ATAK), WinTAK, RaptorX, 
-TAKX, iTAK, et al. For more information on TAK products, see: https://www.tak.gov/
+The ADS-B to Cursor on Target Gateway (ADSBCOT) transforms Automatic Dependent
+Surveillance-Broadcast (ADS-B) aircraft position information into Cursor on 
+Target for display on `TAK Products <https://tak.gov/>`_ such as ATAK, WinTAK & iTAK.
 
 ADS-B data can be recevied from dump1090 using the following network formats:
 
@@ -23,8 +21,8 @@ ADS-B data can be recevied from dump1090 using the following network formats:
 
 If you'd like to feed ADS-B from another source, consider these tools:
 
-* `adsbxcot <https://github.com/ampledata/adsbxcot>`_: ADSBExchange.com to COT Gateway. Transforms ADS-B position messages to CoT PLI Events.
-* `stratuxcot <https://github.com/ampledata/stratuxcot>`_: Stratux ADS-B to COT Gateway. Transforms position messages to CoT PLI Events.
+* `adsbxcot <https://github.com/ampledata/adsbxcot>`_: ADSBExchange.com to CoT Gateway. Transforms ADS-B position messages to CoT PLI Events.
+* `stratuxcot <https://github.com/ampledata/stratuxcot>`_: Stratux ADS-B to CoT Gateway. Transforms position messages to CoT PLI Events.
 
 
 Support Development
@@ -49,41 +47,86 @@ Functionality is provided by a command-line tool called `adsbcot`, which can
 be installed either from the Python Package Index, or directly from this 
 source tree.
 
+ADSBExchange.com Raspberry Pi image ONLY
+----------------------------------------
+
+These instructions are exclusively for systems running the ADSBExchange.com 
+Raspberry Pi image. If you are not running this exact operating system, use the 
+`Installation for Everyone Else <#Installation for Everyone Else>`_ section in the README::
+
+    $ sudo apt update
+    $ sudo apt install -y python3-pip libcblas-dev
+    $ python3 -m pip install adsbcot[with_pymodes]
+
+This procedure will install adsbcot and associated libraries in ``~/.local``. To run::
+
+    # Start adsbcot, connecting to localhost TCP Beast, forwarding CoT to ATAK Multicast:
+    PYTHONPATH=./local/lib/python3.9 DUMP1090_URL=tcp+beast://localhost:30002 .local/bin/adsbcot
+
+
+Installation for Everyone Else
+------------------------------
+
 **To install with HTTP support ONLY:**
 
-Install adsbcot from the Python Package Index (PyPI)::
+Install ADSBCOT from the Python Package Index (PyPI)::
 
     $ python3 -m pip install adsbcot
 
 **To install with TCP Beast & TCP Raw support:**
 
-You must install `adsbcot` with the extra `pymodes` package::
+You must install ADSBCOT with the extra `pymodes` package::
 
     $ python3 -m pip install adsbcot[with_pymodes]
 
 **Alternate / Developers** 
 
-Install adsbcot from the source repository::
+Install ADSBCOT from the source repository::
 
     $ git clone https://github.com/ampledata/adsbcot.git
     $ cd adsbcot/
     $ python3 setup.py install
 
 
-Usage
-=====
+Running
+=======
 
-The `adsbcot` command-line program has 2 runtime arguments::
+ADSBCOT should be started as a background sevice (daemon). Most modern systems 
+use systemd.
 
-    usage: adsbcot [-h] [-c CONFIG_FILE]
 
-    optional arguments:
-    -h, --help            show this help message and exit
-    -c CONFIG_FILE, --CONFIG_FILE CONFIG_FILE
-                            Optional configuration file. Default: config.ini
+Debian, Ubuntu, RaspberryOS, Raspbian
+-------------------------------------
 
-Configuration Parameters
-------------------------
+1. Copy the following code block to ``/etc/systemd/system/adsbcot.service``::
+
+    [adsbcot]
+    Description=ADSBCOT Service
+    After=multi-user.target
+    [Service]
+    ExecStart=/usr/bin/adsbcot -c /etc/adsbcot.ini
+    Restart=always
+    RestartSec=5
+    [Install]
+    WantedBy=multi-user.target
+
+(You can create ``adsbcot.service`` using Nano: ``$ sudo nano /etc/systemd/system/adsbcot.service``)
+
+2. Create the ``/etc/adsbcot.ini`` file and add an appropriate configuration, see `Configuration <#Configuration>`_ section of the README::
+    
+    $ sudo nano /etc/adsbcot.ini
+
+3. Enable cotproxy systemd service::
+    
+    $ sudo systemctl daemon-reload
+    $ sudo systemctl enable adsbcot
+    $ sudo systemctl start adsbcot
+
+4. You can view logs with: ``$ sudo journalctl -xef``
+
+
+Configuration 
+-------------
 Configuration parameters can be specified either via environment variables or in
 a INI-stile configuration file.
 
@@ -153,12 +196,12 @@ To report bugs, please set the DEBUG=1 environment variable to collect logs::
 
 Source
 ======
-The source for adsbcot can be found on Github: https://github.com/ampledata/adsbcot
+The source for ADSBCOT can be found on Github: https://github.com/ampledata/adsbcot
 
 
 Author
 ======
-adsbcot is written and maintained by Greg Albrecht W2GMD oss@undef.net
+ADSBCOT is written and maintained by Greg Albrecht W2GMD oss@undef.net
 
 https://ampledata.org/
 
@@ -166,7 +209,7 @@ https://ampledata.org/
 Copyright
 =========
 
-* adsbcot is Copyright 2022 Greg Albrecht
+* ADSBCOT is Copyright 2022 Greg Albrecht
 * `pyModeS <https://github.com/junzis/pyModeS>`_ is an optional extra package, and is Copyright (C) 2015 Junzi Sun (TU Delft).
 
 
