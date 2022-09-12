@@ -55,7 +55,7 @@ Raspberry Pi image. If you are not running this exact operating system, use the
 `Installation for Everyone Else <#Installation for Everyone Else>`_ section in the README::
 
     $ sudo apt update
-    $ sudo apt install -y python3-pip libcblas-dev
+    $ sudo apt install -y python3-pip libatlas-base-dev
     $ python3 -m pip install adsbcot[with_pymodes]
 
 This procedure will install adsbcot and associated libraries in ``~/.local``. To run::
