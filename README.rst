@@ -55,14 +55,14 @@ Raspberry Pi image. If you are not running this exact operating system, use the
 `Installation for Everyone Else <#Installation for Everyone Else>`_ section in the README::
 
     $ sudo apt update
-    $ sudo apt install -y python3-pip libatlas-base-dev
+    $ sudo apt install -y python3-pip libatlas-base-dev librtlsdr-dev
+    $ python3 -m pip install pyrtlsdr
     $ python3 -m pip install adsbcot[with_pymodes]
 
 This procedure will install adsbcot and associated libraries in ``~/.local``. To run::
 
     # Start adsbcot, connecting to localhost TCP Beast, forwarding CoT to ATAK Multicast:
-    PYTHONPATH=./local/lib/python3.9 DUMP1090_URL=tcp+beast://localhost:30002 .local/bin/adsbcot
-
+    PYTHONPATH=./local/lib/python3.9 DUMP1090_URL=tcp+beast://localhost .local/bin/adsbcot
 
 Installation for Everyone Else
 ------------------------------
