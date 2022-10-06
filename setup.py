@@ -24,7 +24,7 @@ import sys
 import setuptools
 
 __title__ = "adsbcot"
-__version__ = "5.0.5"
+__version__ = "5.1.0"
 __author__ = "Greg Albrecht W2GMD <oss@undef.net>"
 __copyright__ = "Copyright 2022 Greg Albrecht"
 __license__ = "Apache License, Version 2.0"
@@ -56,7 +56,7 @@ setuptools.setup(
     long_description=open("README.rst").read(),
     zip_safe=False,
     include_package_data=True,
-    install_requires=["aircot >= 1.2.0", "pytak >= 5.0.0", "aiohttp < 4.0.0"],
+    install_requires=["aircot >= 1.2.0", "pytak >= 5.4.0", "aiohttp < 4.0.0"],
     extras_require={"with_pymodes": "pymodes >= 2.8"},
     classifiers=[
         "Programming Language :: Python",
