@@ -1,4 +1,4 @@
-ADSBCOT 5.1.0
+ADSBCOT 5.1.1
 -------------
 Adding CoT XML Declaration to output CoT.
 
