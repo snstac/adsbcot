@@ -157,7 +157,7 @@ class FunctionsTestCase(unittest.TestCase):
         assert detail[0].attrib["uid"] == "ICAO-A9EE47"
 
         track = detail[0].findall("track")
-        assert track[0].attrib["course"] == "9999999.0"
+        assert track[0].attrib["course"] == "50.1"
         assert track[0].attrib["speed"] == "40.641076"
 
 
