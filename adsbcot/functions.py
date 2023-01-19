@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 #
-# Copyright 2022 Greg Albrecht <oss@undef.net>
+# Copyright 2023 Greg Albrecht <oss@undef.net>
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -19,6 +19,7 @@
 """ADSBCOT Functions."""
 
 import asyncio
+import warnings
 import xml.etree.ElementTree as ET
 
 from configparser import SectionProxy
@@ -31,7 +32,7 @@ import adsbcot
 
 
 __author__ = "Greg Albrecht W2GMD <oss@undef.net>"
-__copyright__ = "Copyright 2022 Greg Albrecht"
+__copyright__ = "Copyright 2023 Greg Albrecht"
 __license__ = "Apache License, Version 2.0"
 
 
@@ -50,8 +51,7 @@ except ImportError:
 def create_tasks(
     config: SectionProxy, clitool: pytak.CLITool
 ) -> Set[pytak.Worker,]:
-    """
-    Creates specific coroutine task set for this application.
+    """Create specific coroutine task set for this application.
 
     Parameters
     ----------
@@ -69,8 +69,10 @@ def create_tasks(
 
     _dump1090_url: str = config.get("DUMP1090_URL", adsbcot.DEFAULT_DUMP1090_URL)
     config.setdefault("DUMP1090_URL", _dump1090_url)
+    _dump1090_url = config.get("DUMP1090_URL", "")
 
-    if "://" not in config.get("DUMP1090_URL"):
+    if "://" not in _dump1090_url:
+        warnings.warn(f"Invalid DUMP1090_URL: '{_dump1090_url}'", SyntaxWarning)
         raise Exception(
             "Please specify DUMP1090_URL with full URL, including '://', for "
             "example: tcp+beast://example.com:30005"
@@ -84,10 +86,10 @@ def create_tasks(
         tasks.add(adsbcot.ADSBWorker(clitool.tx_queue, config))
     elif "tcp" in dump1090_url.scheme:
         if not WITH_PYMODES:
-            print(f"ERROR from {APP_NAME}")
-            print(f"Please reinstall {APP_NAME} with pyModeS support: ")
-            print(f"$ python3 -m pip install {APP_NAME}[with_pymodes]")
-            print("Exiting...")
+            warnings.warn(
+                (f"Please reinstall {APP_NAME} with pyModeS support:"
+                 f"$ python3 -m pip install {APP_NAME}[with_pymodes]"), 
+                 ImportWarning)
             raise Exception
 
         net_queue: asyncio.Queue = asyncio.Queue()
@@ -109,8 +111,7 @@ def adsb_to_cot_xml(  # NOQA pylint: disable=too-many-locals,too-many-branches,t
     config: Union[SectionProxy, None] = None,
     known_craft: Union[dict, None] = None,
 ) -> Union[ET.Element, None]:
-    """
-    Serializes a Dump1090 ADS-B aircraft object as Cursor-on-Target XML.
+    """Serialize a Dump1090 ADS-B aircraft object as Cursor on Target XML.
 
     Parameters
     ----------
@@ -218,7 +219,7 @@ def adsb_to_cot_xml(  # NOQA pylint: disable=too-many-locals,too-many-branches,t
     contact.set("callsign", callsign)
 
     track: ET.Element = ET.Element("track")
-    track.set("course", str(craft.get("trk", craft.get("trk", "9999999.0"))))
+    track.set("course", str(craft.get("trk", craft.get("track", "9999999.0"))))
 
     # gs: ground speed in knots
     gnds = int(craft.get("gs", 0))
@@ -263,7 +264,7 @@ def adsb_to_cot(
     config: Union[SectionProxy, None] = None,
     known_craft: Union[dict, None] = None,
 ) -> Union[bytes, None]:
-    """Wrapper that returns COT as an XML string."""
+    """Return CoT XML object as an XML string."""
     cot: Union[ET.Element, None] = adsb_to_cot_xml(craft, config, known_craft)
     return (
         b"\n".join([pytak.DEFAULT_XML_DECLARATION, ET.tostring(cot)]) if cot else None

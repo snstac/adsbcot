@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 #
-# Copyright 2022 Greg Albrecht <oss@undef.net>
+# Copyright 2023 Greg Albrecht <oss@undef.net>
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -38,15 +38,15 @@ except ImportError:
 
 
 __author__ = "Greg Albrecht W2GMD <oss@undef.net>"
-__copyright__ = "Copyright 2022 Greg Albrecht"
+__copyright__ = "Copyright 2023 Greg Albrecht"
 __license__ = "Apache License, Version 2.0"
 
 
 class ADSBWorker(pytak.QueueWorker):
-
-    """Reads ADS-B Data from inputs, serializes to COT, and puts on TX queue."""
+    """Read ADS-B Data from inputs, serialize to CoT, and put on TX queue."""
 
     def __init__(self, queue, config):
+        """Initialize this class."""
         super().__init__(queue, config)
         self.known_craft_db = None
         self.session = None
@@ -58,8 +58,7 @@ class ADSBWorker(pytak.QueueWorker):
             self.known_craft_db = aircot.read_known_craft(known_craft)
 
     async def handle_data(self, data: list) -> None:
-        """
-        Handle Data from ADS-B receiver: Render to COT, put on TX queue.
+        """Handle Data from ADS-B receiver: Render to CoT, put on TX queue.
 
         Parameters
         ----------
@@ -113,9 +112,7 @@ class ADSBWorker(pytak.QueueWorker):
             await self.put_queue(event)
 
     async def get_dump1090_feed(self, url: str):
-        """
-        Polls the dump1090 JSON API and passes data to data handler.
-        """
+        """Poll the dump1090 JSON API and passes data to data handler."""
         async with self.session.get(url) as resp:
             if resp.status != 200:
                 response_content = await resp.text()
@@ -124,18 +121,18 @@ class ADSBWorker(pytak.QueueWorker):
                 return
 
             json_resp = await resp.json()
-            if json_resp == None:
+            if json_resp is None:
                 return
 
             data = json_resp.get("aircraft")
-            if data == None:
+            if data is None:
                 return
 
             self._logger.info("Retrieved %s aircraft messages.", str(len(data) or "No"))
             await self.handle_data(data)
 
     async def run(self, number_of_iterations=-1):
-        """Runs this Thread, Reads from Pollers."""
+        """Run this Thread, Reads from Pollers."""
         url: str = self.config.get("DUMP1090_URL", "")
         if not url:
             raise Exception("Please specify a DUMP1090_URL.")
@@ -161,11 +158,12 @@ class ADSBWorker(pytak.QueueWorker):
 
 
 class ADSBNetWorker(ADSBWorker):
-    """Reads ADS-B Data from network, renders to COT, and puts on queue."""
+    """Read ADS-B Data from network, renders to COT, and puts on queue."""
 
     def __init__(
         self, queue, net_queue, config, data_type
     ):  # NOQA pylint: disable=too-many-arguments
+        """Initialize this class."""
         super().__init__(queue, config)
         self.net_queue = net_queue
         self.config = config
@@ -177,7 +175,7 @@ class ADSBNetWorker(ADSBWorker):
         self.local_buffer_commb_ts = []
 
     def _reset_local_buffer(self):
-        """Resets Socket Buffers."""
+        """Reset Socket Buffers."""
         self.local_buffer_adsb_msg = []
         self.local_buffer_adsb_ts = []
         self.local_buffer_commb_msg = []
@@ -186,7 +184,7 @@ class ADSBNetWorker(ADSBWorker):
     async def run(
         self, number_of_iterations=-1
     ):  # NOQA pylint: disable=too-many-locals, too-many-branches
-        """Runs the main process loop."""
+        """Run the main process loop."""
         self._logger.info(
             "Running %s for data_type: %s", self.__class__, self.data_type
         )
@@ -250,44 +248,30 @@ class ADSBNetWorker(ADSBWorker):
 
             acs = decoder.get_aircraft()
             for key, val in acs.items():
-                # self._logger.debug("acs=%s", acs[k])
-                lat = val.get("lat")
-                lon = val.get("lon")
-                flight = val.get("call", key)
-                alt_geom = val.get("alt")
-                gnds = val.get("gs")
-                reg = val.get("r")
-                trk = val.get("trk")
-                # FIXME: Convert this to a filter()
-                if (  # pylint: disable=too-many-boolean-expressions
-                    lat and lon and flight and alt_geom and gnds and trk
-                ):
-                    data = [
-                        {
-                            "hex": key,
-                            "lat": lat,
-                            "lon": lon,
-                            "flight": flight.replace("_", ""),
-                            "alt_geom": alt_geom,
-                            "gs": gnds,
-                            "reg": reg,
-                            "trk": trk,
-                        }
-                    ]
-                    await self.handle_data(data)
-                else:
-                    continue
+                _data: dict = {
+                    "hex": key,
+                    "lat": val.get("lat"),
+                    "lon": val.get("lon"),
+                    "flight": val.get("call", key).replace("_", ""),
+                    "alt_geom": val.get("alt"),
+                    "gs": val.get("gs"),
+                    "reg": val.get("r"),
+                    "trk": val.get("track", val.get("trk")),
+                }
+                if all(_data):
+                    await self.handle_data([_data])
 
 
 class ADSBNetReceiver(pytak.QueueWorker):  # pylint: disable=too-few-public-methods
-    """Reads ADS-B Data from network and puts on queue."""
+    """Read ADS-B Data from network and puts on queue."""
 
     def __init__(self, queue, config, data_type):
+        """Initialize this class."""
         super().__init__(queue, config)
         self.data_type: str = data_type
 
     async def run(self, number_of_iterations=-1):
-        """Runs the main process loop."""
+        """Run the main process loop."""
         url: ParseResult = urlparse(self.config.get("DUMP1090_URL"))
 
         self._logger.info("Running %s for %s", self.__class__, url.geturl())

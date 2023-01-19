@@ -27,17 +27,16 @@ If you'd like to feed ADS-B from another source, consider these tools:
 
 Support Development
 ===================
+.. image:: https://www.buymeacoffee.com/assets/img/custom_images/orange_img.png
+    :target: https://www.buymeacoffee.com/ampledata
+    :alt: Support Development: Buy me a coffee!
 
-**Tech Support**: Email support@undef.net or Signal/WhatsApp: +1-310-621-9598
+**Tech Support**: Email takhelp@undef.net or Signal: +1-310-621-9598
 
 This tool has been developed for the Disaster Response, Public Safety and
 Frontline Healthcare community. This software is currently provided at no-cost
 to users. Any contribution you can make to further this project's development
 efforts is greatly appreciated.
-
-.. image:: https://www.buymeacoffee.com/assets/img/custom_images/orange_img.png
-    :target: https://www.buymeacoffee.com/ampledata
-    :alt: Support Development: Buy me a coffee!
 
 
 Installation
@@ -132,7 +131,7 @@ a INI-stile configuration file.
 
 Parameters:
 
-* **DUMP1090_URL**: (*optional*) dump1090 source URL, one of: tcp+beast://, tcp+raw:// or http://. Default: tcp+beast://piaware.local:30005 
+* **DUMP1090_URL**: (*optional*) dump1090 source URL, one of: ``tcp+beast://``, ``tcp+raw://`` or ``http://``. Default: ``tcp+beast://piaware.local:30005`` 
 * **COT_URL**: (*optional*) Destination for Cursor-On-Target messages. See `PyTAK <https://github.com/ampledata/pytak#configuration-parameters>`_ for options.
 * **POLL_INTERVAL**: (*optional*) Period in seconds to poll a dump1090 HTTP aircraft.json feed.
 
@@ -209,14 +208,14 @@ https://ampledata.org/
 Copyright
 =========
 
-* ADSBCOT is Copyright 2022 Greg Albrecht
+* ADSBCOT is Copyright 2023 Greg Albrecht
 * `pyModeS <https://github.com/junzis/pyModeS>`_ is an optional extra package, and is Copyright (C) 2015 Junzi Sun (TU Delft).
 
 
 License
 =======
 
-Copyright 2022 Greg Albrecht <oss@undef.net>
+Copyright 2023 Greg Albrecht <oss@undef.net>
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.

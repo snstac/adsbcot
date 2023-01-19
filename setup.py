@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 #
-# Copyright 2022 Greg Albrecht <oss@undef.net>
+# Copyright 2023 Greg Albrecht <oss@undef.net>
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -24,14 +24,14 @@ import sys
 import setuptools
 
 __title__ = "adsbcot"
-__version__ = "5.1.1"
+__version__ = "5.1.2"
 __author__ = "Greg Albrecht W2GMD <oss@undef.net>"
-__copyright__ = "Copyright 2022 Greg Albrecht"
+__copyright__ = "Copyright 2023 Greg Albrecht"
 __license__ = "Apache License, Version 2.0"
 
 
 def publish():
-    """Function for publishing package to pypi."""
+    """Publish this package to pypi."""
     if sys.argv[-1] == "publish":
         os.system("python setup.py sdist")
         os.system("twine upload dist/*")
@@ -41,6 +41,15 @@ def publish():
 publish()
 
 
+def read_readme(readme_file="README.rst") -> str:
+    """Read the contents of the README file for use as a long_description."""
+    readme: str = ""
+    this_directory = os.path.abspath(os.path.dirname(__file__))
+    with open(os.path.join(this_directory, readme_file), encoding="UTF-8") as rmf:
+        readme = rmf.read()
+    return readme
+
+
 setuptools.setup(
     version=__version__,
     name=__title__,
@@ -48,18 +57,18 @@ setuptools.setup(
     package_dir={__title__: __title__},
     url=f"https://github.com/ampledata/{__title__}",
     entry_points={"console_scripts": [f"{__title__} = {__title__}.commands:main"]},
-    description="ADS-B to Cursor-On-Target Gateway.",
+    description="ADS-B to Cursor on Target Gateway.",
     author="Greg Albrecht",
     author_email="oss@undef.net",
     package_data={"": ["LICENSE"]},
     license="Apache License, Version 2.0",
-    long_description=open("README.rst").read(),
+    long_description=read_readme(),
     zip_safe=False,
     include_package_data=True,
     install_requires=["aircot >= 1.2.0", "pytak >= 5.4.0", "aiohttp < 4.0.0"],
     extras_require={"with_pymodes": "pymodes >= 2.8"},
     classifiers=[
-        "Programming Language :: Python",
+        "Programming Language :: Python :: 3",
         "License :: OSI Approved :: Apache Software License",
     ],
     keywords=["ADS-B", "ADSB", "Cursor on Target", "ATAK", "TAK", "CoT"],
