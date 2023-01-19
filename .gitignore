@@ -1,4 +1,5 @@
 .vscode/
+.devcontainer/
 *.deb
 *.egg
 *.egg-info/
