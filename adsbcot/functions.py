@@ -218,7 +218,7 @@ def adsb_to_cot_xml(  # NOQA pylint: disable=too-many-locals,too-many-branches,t
     contact.set("callsign", callsign)
 
     track: ET.Element = ET.Element("track")
-    track.set("course", str(craft.get("track", "9999999.0")))
+    track.set("course", str(craft.get("trk", craft.get("trk", "9999999.0"))))
 
     # gs: ground speed in knots
     gnds = int(craft.get("gs", 0))
