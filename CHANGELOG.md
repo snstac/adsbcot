@@ -1,8 +1,8 @@
 ADSBCOT 6.0.0
 -------------
 Improved support for AirTAK.
+- Added a Read the Docs documentation site: https://adsbcot.readthedocs.io
 - Added ability to read file:// URLs, including reading aircraft.json from local fs.
-- Added support for globe.adsb.fi.
 - Replaced setup.py metadata with setup.cfg.
 - Code cleanup.
 
