@@ -1,12 +1,21 @@
 Running
 =======
 
-ADSBCOT should be started as a background sevice (daemon). Most modern systems 
-use systemd.
+In a terminal
+-------------
 
+ADSBCOT should run on most systems out of the box by logging into a terminal (ssh) and typing: `adsbcot`
 
-Debian, Ubuntu, RaspberryOS, Raspbian
--------------------------------------
+This will run ADSBCOT in the 'foreground' of your terminal. If you exit or disconnect 
+from your terminal, ADSBCOT will also exit. 
+
+To run ADSBCOT with a specific configuration file, you can type: `adsbcot -c config.ini`, 
+where `config.ini` is the name of your configuration file. For configuration options; see :ref:`config`.
+
+As a background system service
+------------------------------
+
+To keep ADSBCOT running in the background, it is recommended to run it as a system service ("daemon") using systemd.
 
 1. Copy the following code block to ``/etc/systemd/system/adsbcot.service``::
 
@@ -22,7 +31,7 @@ Debian, Ubuntu, RaspberryOS, Raspbian
 
 (You can create ``adsbcot.service`` using Nano: ``$ sudo nano /etc/systemd/system/adsbcot.service``)
 
-2. Create the ``/etc/adsbcot.ini`` file and add an appropriate configuration, see `Configuration <#Configuration>`_ section of the README::
+2. Create the ``/etc/adsbcot.ini`` file and add an appropriate configuration (See also: :ref:`config`)::
     
     $ sudo nano /etc/adsbcot.ini
 

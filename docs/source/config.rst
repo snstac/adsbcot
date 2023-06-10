@@ -16,7 +16,7 @@ ADSBCOT has the following built-in configuration parameters:
 
   Source of dump1090 decoded ADS-B data. Should start with one of: ``tcp://``, ``tcp+beast://``, ``tcp+raw://``, ``http://``, or ``file://``. Defaults to ``file:///run/dump1090-fa/aircraft.json`` (dump1090-fa's local JSON file).
 
-.. describe:: POLL_INTERVAL (optiona)
+.. describe:: POLL_INTERVAL (optional)
 
   Period, in seconds, to poll the FEED_URL, if the FEED_URL is of the type HTTP.
 
