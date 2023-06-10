@@ -1,9 +1,9 @@
 ADS-B to TAK Gateway
 ********************
 
-.. image:: https://github.com/snstac/pytak/blob/main/docs/atak_screenshot_with_pytak_logo-x25.jpg
+.. image:: https://github.com/snstac/adsbcot/blob/main/docs/atak_screenshot_with_pytak_logo-x25.jpg
    :alt: ATAK Screenshot with PyTAK Logo.
-   :target: https://github.com/snstac/pytak/blob/main/docs/atak_screenshot_with_pytak_logo.jpg
+   :target: https://github.com/snstac/adsbcot/blob/main/docs/atak_screenshot_with_pytak_logo.jpg
 
 The ADS-B to TAK Gateway (ADSBCOT) transforms Automatic Dependent 
 Surveillance-Broadcast (ADS-B) aircraft position information into Cursor on 
@@ -12,9 +12,9 @@ Target for display on `TAK Products <https://tak.gov/>`_ such as ATAK, WinTAK & 
 ADS-B data can be recevied from dump1090 using the following network formats:
 
 1. Local file.
-1. Aircraft JSON HTTP feed. See `dump1090 README-json.md <https://github.com/flightaware/dump1090/blob/master/README-json.md>`_.
-2. Raw TCP (via `pyModeS <https://github.com/junzis/pyModeS>`_)
-3. Beast TCP (via `pyModeS <https://github.com/junzis/pyModeS>`_)
+2. Aircraft JSON HTTP feed. See `dump1090 README-json.md <https://github.com/flightaware/dump1090/blob/master/README-json.md>`_.
+3. Raw TCP (via `pyModeS <https://github.com/junzis/pyModeS>`_)
+4. Beast TCP (via `pyModeS <https://github.com/junzis/pyModeS>`_)
 
 .. image:: https://raw.githubusercontent.com/ampledata/adsbcot/main/docs/adsbcot_operation.png
    :alt: ADSBCOT Operation Diagram.
