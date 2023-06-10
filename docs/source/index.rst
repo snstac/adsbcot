@@ -25,22 +25,6 @@ If you'd like to feed ADS-B from another source, consider these tools:
 * `stratuxcot <https://github.com/ampledata/stratuxcot>`_: Stratux ADS-B to TAK Gateway.
 
 
-
-Quickstart
-----------
-
-1. do stuff.
-
-2. do other stuff:
-
-   .. code-block:: Python
-
-   pythong stuff
-
-   See :doc:`config` for config examples.
-
-3. do last stuff
-
 Contents
 --------
 .. toctree::
@@ -48,10 +32,8 @@ Contents
 
    install
    config
-   compat
-   clients
-   examples
-   api
+   running
+
 
 .. seealso::
 
