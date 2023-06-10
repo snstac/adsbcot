@@ -15,7 +15,10 @@ where ``config.ini`` is the name of your configuration file. For configuration o
 As a background system service
 ------------------------------
 
-To keep ADSBCOT running in the background, it is recommended to run it as a system service ("daemon") using systemd.
+To keep ADSBCOT running in the background, it is recommended to run it as a system service ("daemon") using systemd. 
+This example assumes ADSBCOT was installed with ``pip`` and its executable is located at ``/usr/local/bin/adsbcot``. 
+If your system differs, you'll need to change the following code-block to match the installation location for the 
+``adsbcot`` executable and, if applicable, the configuration file. (Try: ``find / -name adsbcot -type f``)
 
 1. Copy the following code block to ``/etc/systemd/system/adsbcot.service``::
 
@@ -23,7 +26,7 @@ To keep ADSBCOT running in the background, it is recommended to run it as a syst
     Description=ADS-B to TAK Gateway
     After=network.target
     [Service]
-    ExecStart=/usr/bin/adsbcot -c /etc/adsbcot.ini
+    ExecStart=/usr/local/bin/adsbcot -c /etc/adsbcot.ini
     Restart=always
     RestartSec=5
     [Install]
