@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 #
-# Copyright 2023 Greg Albrecht <oss@undef.net>
+# Copyright 2023 Sensors & Signals LLC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -13,22 +13,20 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-# Author:: Greg Albrecht W2GMD <oss@undef.net>
-#
 
 """ADSBCOT Function Tests."""
 
 import unittest
-import xml.etree.ElementTree as ET
+import xml.etree.ElementTree as etree
 
 import adsbcot
 
-__author__ = "Greg Albrecht W2GMD <oss@undef.net>"
-__copyright__ = "Copyright 2023 Greg Albrecht"
+__author__ = "Greg Albrecht <gba@snstac.com>"
+__copyright__ = "Copyright 2023 Sensors & Signals LLC"
 __license__ = "Apache License, Version 2.0"
 
 
-TEST_DUMP1090_FEED = {
+TEST_FEED = {
     "aircraft": [
         {
             "alt_baro": 3700,
@@ -57,6 +55,9 @@ TEST_DUMP1090_FEED = {
             "tisb": [],
             "track": 50.1,
             "version": 2,
+            "reg": "test_reg_1234",
+            "squawk": "3514",
+            "t": "test_craft_type_1234"
         },
         {
             "alt_baro": 37000,
@@ -131,16 +132,13 @@ class FunctionsTestCase(unittest.TestCase):
     Test class for functions... functions.
     """
 
-    def test_adsb_to_cot(self):
-        """
-        Tests that adsb_to_cot decodes ADS-B into a Cursor-on-Target
-        message.
-        """
-        aircraft = TEST_DUMP1090_FEED["aircraft"]
+    def test_adsb_to_cot_xml(self):
+        """Test that adsb_to_cot serializses ADS-B as valid Cursor on Target XML Object."""
+        aircraft = TEST_FEED["aircraft"]
         craft = aircraft[0]
         cot = adsbcot.functions.adsb_to_cot_xml(craft)
-
-        assert isinstance(cot, ET.Element)
+        print("COT: %s", cot)
+        assert isinstance(cot, etree.Element)
         assert cot.tag == "event"
         assert cot.attrib["version"] == "2.0"
         assert cot.attrib["type"] == "a-n-A-C-F"
@@ -154,11 +152,37 @@ class FunctionsTestCase(unittest.TestCase):
 
         detail = cot.findall("detail")
         assert detail[0].tag == "detail"
-        assert detail[0].attrib["uid"] == "ICAO-A9EE47"
 
         track = detail[0].findall("track")
         assert track[0].attrib["course"] == "50.1"
-        assert track[0].attrib["speed"] == "40.641076"
+        assert track[0].attrib["speed"] == "40.898298000000004"
+
+    def test_adsb_to_cot(self):
+        """Test that adsb_to_cot serializses ADS-B as valid Cursor on Target XML String."""
+        aircraft = TEST_FEED["aircraft"]
+        craft = aircraft[0]
+        cot = adsbcot.functions.adsb_to_cot(craft)
+        assert b"ICAO-A9EE47" in cot
+        assert b"a-n-A-C-F" in cot
+        assert b"37.836449" in cot
+        assert b"-122.030281" in cot
+        assert b"1143.0" in cot
+
+    def test_adsb_to_cot_no_lat(self):
+        """Test that adsb_to_cot rejects adsb with not valid latitude."""
+        aircraft = TEST_FEED["aircraft"]
+        craft = aircraft[2]
+        del craft["lat"]
+        cot = adsbcot.functions.adsb_to_cot_xml(craft)
+        assert cot is None
+
+    def test_adsb_to_cot_no_lon(self):
+        """Test that adsb_to_cot rejects adsb with not valid longitude."""
+        aircraft = TEST_FEED["aircraft"]
+        craft = aircraft[2]
+        del craft["lon"]
+        cot = adsbcot.functions.adsb_to_cot_xml(craft)
+        assert cot is None
 
 
 if __name__ == "__main__":

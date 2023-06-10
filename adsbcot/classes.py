@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 #
-# Copyright 2023 Greg Albrecht <oss@undef.net>
+# Copyright 2023 Sensors & Signals LLC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -13,20 +13,30 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-# Author:: Greg Albrecht W2GMD <oss@undef.net>
-#
 
 """ADSBCOT Class Definitions."""
 
 import asyncio
+import importlib.util
+import json
+import os
+import warnings
 
-from typing import Union
+from pathlib import Path
+from typing import Optional
 from urllib.parse import ParseResult, urlparse
 
 import aiohttp
 import pytak
 import aircot
 import adsbcot
+
+
+# We don't require inotify, as it only would work on Linux
+try:
+    from asyncinotify import Inotify, Mask
+except:
+    pass
 
 # We won't use pyModeS if it isn't installed:
 try:
@@ -37,23 +47,23 @@ except ImportError:
     pass
 
 
-__author__ = "Greg Albrecht W2GMD <oss@undef.net>"
-__copyright__ = "Copyright 2023 Greg Albrecht"
+__author__ = "Greg Albrecht <gba@snstac.com>"
+__copyright__ = "Copyright 2023 Sensors & Signals LLC"
 __license__ = "Apache License, Version 2.0"
 
 
 class ADSBWorker(pytak.QueueWorker):
     """Read ADS-B Data from inputs, serialize to CoT, and put on TX queue."""
 
-    def __init__(self, queue, config):
+    def __init__(self, queue, config) -> None:
         """Initialize this class."""
         super().__init__(queue, config)
-        self.known_craft_db = None
-        self.session = None
+        self.known_craft_db: Optional[dict] = None
+        self.session: Optional[aiohttp.ClientSession] = None
         self.uid_key: str = self.config.get("UID_KEY", "ICAO")
 
         known_craft = self.config.get("KNOWN_CRAFT")
-        if known_craft:
+        if known_craft and os.path.exists(known_craft):
             self._logger.info("Using KNOWN_CRAFT: %s", known_craft)
             self.known_craft_db = aircot.read_known_craft(known_craft)
 
@@ -100,7 +110,7 @@ class ADSBWorker(pytak.QueueWorker):
             ):
                 continue
 
-            event: Union[str, None] = adsbcot.adsb_to_cot(
+            event: Optional[bytes] = adsbcot.adsb_to_cot(
                 craft, self.config, known_craft
             )
 
@@ -111,8 +121,8 @@ class ADSBWorker(pytak.QueueWorker):
             self._logger.debug("Handling %s/%s ICAO: %s", i, lod, icao)
             await self.put_queue(event)
 
-    async def get_dump1090_feed(self, url: str):
-        """Poll the dump1090 JSON API and passes data to data handler."""
+    async def get_feed(self, url: bytes) -> None:
+        """Poll the ADS-B feed and pass data to the data handler."""
         async with self.session.get(url) as resp:
             if resp.status != 200:
                 response_content = await resp.text()
@@ -124,23 +134,31 @@ class ADSBWorker(pytak.QueueWorker):
             if json_resp is None:
                 return
 
-            data = json_resp.get("aircraft")
+            data = json_resp.get("aircraft", json_resp.get("ac"))
             if data is None:
                 return
 
-            self._logger.info("Retrieved %s aircraft messages.", str(len(data) or "No"))
+            self._logger.info(
+                "Retrieved %s ADS-B aircraft messages.", str(len(data) or "No")
+            )
             await self.handle_data(data)
 
-    async def run(self, number_of_iterations=-1):
+    async def run(self, _=-1) -> None:
         """Run this Thread, Reads from Pollers."""
-        url: str = self.config.get("DUMP1090_URL", "")
+        dump1090_url: bytes = self.config.get("DUMP1090_URL", "")
+        if dump1090_url:
+            warnings.warn(
+                "DUMP1090_URL setting is DEPRECATED. Please use FEED_URL instead."
+            )
+
+        url: bytes = self.config.get("FEED_URL", dump1090_url)
         if not url:
-            raise Exception("Please specify a DUMP1090_URL.")
+            raise ValueError("Please specify a FEED_URL.")
 
         self._logger.info("Running %s", self.__class__)
 
-        known_craft: str = self.config.get("KNOWN_CRAFT", "")
-        poll_interval: str = self.config.get(
+        known_craft: bytes = self.config.get("KNOWN_CRAFT", "")
+        poll_interval: bytes = self.config.get(
             "POLL_INTERVAL", adsbcot.DEFAULT_POLL_INTERVAL
         )
 
@@ -148,13 +166,47 @@ class ADSBWorker(pytak.QueueWorker):
             self._logger.info("Using KNOWN_CRAFT: %s", known_craft)
             self.known_craft_db = aircot.read_known_craft(known_craft)
 
-        async with aiohttp.ClientSession() as self.session:
-            while 1:
-                self._logger.info(
-                    "%s polling every %ss: %s", self.__class__, poll_interval, url
-                )
-                await self.get_dump1090_feed(url)
-                await asyncio.sleep(int(poll_interval))
+        feed_url: ParseResult = urlparse(url)
+
+        if "http" in feed_url.scheme:
+            async with aiohttp.ClientSession() as self.session:
+                while 1:
+                    self._logger.info(
+                        "%s polling every %ss: %s", self.__class__, poll_interval, url
+                    )
+                    await self.get_feed(url)
+                    await asyncio.sleep(int(poll_interval))
+        elif "file" in feed_url.scheme:
+            if importlib.util.find_spec("asyncinotify") is None:
+                while 1:
+                    self._logger.info(
+                        "%s polling every %ss: %s", self.__class__, poll_interval, url
+                    )
+                    await self.get_file_feed(url)
+                    await asyncio.sleep(int(poll_interval))
+            else:
+                with Inotify() as inotify:
+                    inotify.add_watch(
+                        Path(feed_url.path).parents[0],
+                        Mask.MODIFY | Mask.CREATE | Mask.MOVE | Mask.MOVED_TO,
+                    )
+
+                    async for event in inotify:
+                        if str(event.path) == str(feed_url.path):
+                            await self.get_file_feed(feed_url)
+
+    async def get_file_feed(self, feed_url) -> None:
+        """Read data from an aircraft JSON file."""
+        jdata = {}
+        with open(feed_url.path, "r", encoding="UTF-8") as feed_fd:
+            jdata = json.loads(feed_fd.read())
+
+        data = jdata.get("aircraft", jdata.get("ac"))
+        if data is None:
+            return
+
+        self._logger.info("Retrieved %s ADS-B aircraft messages.", str(len(data) or "No"))
+        await self.handle_data(data)
 
 
 class ADSBNetWorker(ADSBWorker):
@@ -182,8 +234,8 @@ class ADSBNetWorker(ADSBWorker):
         self.local_buffer_commb_ts = []
 
     async def run(
-        self, number_of_iterations=-1
-    ):  # NOQA pylint: disable=too-many-locals, too-many-branches
+        self, _=-1
+    ) -> None:  # NOQA pylint: disable=too-many-locals, too-many-branches
         """Run the main process loop."""
         self._logger.info(
             "Running %s for data_type: %s", self.__class__, self.data_type
@@ -265,14 +317,14 @@ class ADSBNetWorker(ADSBWorker):
 class ADSBNetReceiver(pytak.QueueWorker):  # pylint: disable=too-few-public-methods
     """Read ADS-B Data from network and puts on queue."""
 
-    def __init__(self, queue, config, data_type):
+    def __init__(self, queue, config, data_type) -> None:
         """Initialize this class."""
         super().__init__(queue, config)
         self.data_type: str = data_type
 
-    async def run(self, number_of_iterations=-1):
+    async def run(self, _=-1) -> None:
         """Run the main process loop."""
-        url: ParseResult = urlparse(self.config.get("DUMP1090_URL"))
+        url: ParseResult = urlparse(self.config.get("FEED_URL"))
 
         self._logger.info("Running %s for %s", self.__class__, url.geturl())
 
@@ -281,11 +333,11 @@ class ADSBNetReceiver(pytak.QueueWorker):  # pylint: disable=too-few-public-meth
         else:
             host = url.netloc
             if self.data_type == "raw":
-                port = adsbcot.DEFAULT_DUMP1090_TCP_RAW_PORT
+                port = adsbcot.DEFAULT_TCP_RAW_PORT
             elif self.data_type == "beast":
-                port = adsbcot.DEFAULT_DUMP1090_TCP_BEAST_PORT
+                port = adsbcot.DEFAULT_TCP_BEAST_PORT
             else:
-                raise Exception("Invalid data_type='%s'" % self.data_type)
+                raise ValueError(f"Invalid data_type='{self.data_type}'")
 
         self._logger.debug("host=%s port=%s", host, port)
 
@@ -299,3 +351,126 @@ class ADSBNetReceiver(pytak.QueueWorker):  # pylint: disable=too-few-public-meth
             while 1:
                 received = await reader.read(4096)
                 self.queue.put_nowait(received)
+
+
+class FileWatcher(pytak.QueueWorker):
+    """Read ADS-B Data from a file, serialize to CoT, and put on TX queue."""
+
+    def __init__(self, queue, config) -> None:
+        """Initialize this class."""
+        super().__init__(queue, config)
+        self.known_craft_db = None
+        self.session = None
+        self.uid_key: str = self.config.get("UID_KEY", "ICAO")
+
+        known_craft = self.config.get("KNOWN_CRAFT")
+        if known_craft:
+            self._logger.info("Using KNOWN_CRAFT: %s", known_craft)
+            self.known_craft_db = aircot.read_known_craft(known_craft)
+
+    async def handle_data(self, data: list) -> None:
+        """Handle Data from ADS-B receiver: Render to CoT, put on TX queue.
+
+        Parameters
+        ----------
+        data : `list[dict, ]`
+            List of craft data as key/value arrays.
+        """
+        if not isinstance(data, list):
+            self._logger.warning("Invalid aircraft data, should be a Python `list`.")
+            return
+
+        if not data:
+            self._logger.warning("Empty aircraft list")
+            return
+
+        lod = len(data)
+        i = 1
+        for craft in data:
+            i += 1
+            if not isinstance(craft, dict):
+                self._logger.warning("Aircraft list item was not a Python `dict`.")
+                continue
+
+            icao: str = craft.get("hex", "")
+            if icao:
+                icao = icao.strip().upper()
+            else:
+                continue
+
+            if "~" in icao and not self.config.getboolean("INCLUDE_TISB"):
+                continue
+
+            known_craft: dict = aircot.get_known_craft(self.known_craft_db, icao, "HEX")
+
+            # Skip if we're using known_craft CSV and this Craft isn't found:
+            if (
+                self.known_craft_db
+                and not known_craft
+                and not self.config.getboolean("INCLUDE_ALL_CRAFT")
+            ):
+                continue
+
+            event: Optional[bytes] = adsbcot.adsb_to_cot(
+                craft, self.config, known_craft
+            )
+
+            if not event:
+                self._logger.debug("Empty COT Event for craft=%s", craft)
+                continue
+
+            self._logger.debug("Handling %s/%s ICAO: %s", i, lod, icao)
+            await self.put_queue(event)
+
+    async def get_feed(self, url: bytes) -> None:
+        """Poll the ADS-B feed and pass data to the data handler."""
+        async with self.session.get(url) as resp:
+            if resp.status != 200:
+                response_content = await resp.text()
+                self._logger.error("Received HTTP Status %s for %s", resp.status, url)
+                self._logger.error(response_content)
+                return
+
+            json_resp = await resp.json()
+            if json_resp is None:
+                return
+
+            data = json_resp.get("aircraft", json_resp.get("ac"))
+            if data is None:
+                return
+
+            self._logger.info(
+                "Retrieved %s ADS-B aircraft messages.", str(len(data) or "No")
+            )
+            await self.handle_data(data)
+
+    async def run(self, _=-1) -> None:
+        """Run this Thread, Reads from Pollers."""
+        dump1090_url: bytes = self.config.get("DUMP1090_URL", "")
+        if dump1090_url:
+            warnings.warn(
+                "DUMP1090_URL setting is DEPRECATED. Please use FEED_URL instead."
+            )
+
+        url: bytes = self.config.get("FEED_URL", dump1090_url)
+        if not url:
+            raise ValueError("Please specify a FEED_URL.")
+
+        self._logger.info("Running %s", self.__class__)
+
+        known_craft: bytes = self.config.get("KNOWN_CRAFT", "")
+        poll_interval: bytes = self.config.get(
+            "POLL_INTERVAL", adsbcot.DEFAULT_POLL_INTERVAL
+        )
+
+        if known_craft:
+            self._logger.info("Using KNOWN_CRAFT: %s", known_craft)
+            self.known_craft_db = aircot.read_known_craft(known_craft)
+
+        async with aiohttp.ClientSession() as self.session:
+            while 1:
+                self._logger.info(
+                    "%s polling every %ss: %s", self.__class__, poll_interval, url
+                )
+                await self.get_feed(url)
+                await asyncio.sleep(int(poll_interval))

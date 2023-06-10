@@ -1,3 +1,11 @@
+ADSBCOT 6.0.0
+-------------
+Improved support for AirTAK.
+- Added ability to read file:// URLs, including reading aircraft.json from local fs.
+- Added support for globe.adsb.fi.
+- Replaced setup.py metadata with setup.cfg.
+- Code cleanup.
+
 ADSBCOT 5.1.2
 -------------
 - Fixed #17: Incorrect course/track for some dump1090 feeds. Thanks @dnlbaldwin

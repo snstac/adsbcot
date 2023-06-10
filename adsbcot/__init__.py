@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 #
-# Copyright 2023 Greg Albrecht <oss@undef.net>
+# Copyright 2023 Sensors & Signals LLC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -13,28 +13,25 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-# Author:: Greg Albrecht W2GMD <oss@undef.net>
-#
 
-"""ADS-B Cursor on Target Gateway.
+"""ADS-B to TAK Gateway.
 
-:author: Greg Albrecht W2GMD <oss@undef.net>
-:copyright: Copyright 2023 Greg Albrecht
-:license: Apache License, Version 2.0
-:source: <https://github.com/ampledata/adsbcot>
+:author: Greg Albrecht <gba@snstac.com>
+:source: <https://github.com/snstac/adsbcot>
 """
 
 from .constants import (  # NOQA
     DEFAULT_POLL_INTERVAL,
-    DEFAULT_DUMP1090_TCP_RAW_PORT,
-    DEFAULT_DUMP1090_TCP_BEAST_PORT,
-    DEFAULT_DUMP1090_URL,
+    DEFAULT_TCP_RAW_PORT,
+    DEFAULT_TCP_BEAST_PORT,
+    DEFAULT_FEED_URL,
 )
 
 from .functions import adsb_to_cot, create_tasks  # NOQA
 
 from .classes import ADSBWorker, ADSBNetReceiver, ADSBNetWorker  # NOQA
 
-__author__ = "Greg Albrecht W2GMD <oss@undef.net>"
-__copyright__ = "Copyright 2023 Greg Albrecht"
+__version__ = "6.0.0b2"
+__author__ = "Greg Albrecht <gba@snstac.com>"
+__copyright__ = "Copyright 2023 Sensors & Signals LLC"
 __license__ = "Apache License, Version 2.0"
