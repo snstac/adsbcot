@@ -20,18 +20,23 @@
 :source: <https://github.com/snstac/adsbcot>
 """
 
-from .constants import (  # NOQA
-    DEFAULT_POLL_INTERVAL,
-    DEFAULT_TCP_RAW_PORT,
-    DEFAULT_TCP_BEAST_PORT,
-    DEFAULT_FEED_URL,
-)
-
-from .functions import adsb_to_cot, create_tasks  # NOQA
-
-from .classes import ADSBWorker, ADSBNetReceiver, ADSBNetWorker  # NOQA
-
 __version__ = "6.0.0b2"
 __author__ = "Greg Albrecht <gba@snstac.com>"
 __copyright__ = "Copyright 2023 Sensors & Signals LLC"
 __license__ = "Apache License, Version 2.0"
+
+# Python 3.6 test/build work-around:
+try:
+    from .constants import (  # NOQA
+        DEFAULT_POLL_INTERVAL,
+        DEFAULT_TCP_RAW_PORT,
+        DEFAULT_TCP_BEAST_PORT,
+        DEFAULT_FEED_URL,
+    )
+
+    from .functions import adsb_to_cot, create_tasks  # NOQA
+
+    from .classes import ADSBWorker, ADSBNetReceiver, ADSBNetWorker  # NOQA
+except ImportError:
+    import warnings
+    warnings.warn("Unable to import required modules, ignoring (Python 3.6 build work-around).")

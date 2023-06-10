@@ -25,13 +25,9 @@ from configparser import SectionProxy
 from typing import Optional, Set, Union
 from urllib.parse import ParseResult, urlparse
 
-# Python 3.6 test/build work-around:
-try:
-    import aircot
-    import pytak
-    import adsbcot
-except ImportError:
-    warnings.warn("Unable to import required modules, ignoring (Python 3.6 build work-around).")
+import aircot
+import pytak
+import adsbcot
 
 __author__ = "Greg Albrecht <gba@snstac.com>"
 __copyright__ = "Copyright 2023 Sensors & Signals LLC"
