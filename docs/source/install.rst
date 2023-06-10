@@ -33,7 +33,7 @@ Install ADSBCOT from the release zip file::
 
 Install ADSBCOT from the GitHub hosted source repository::
 
-    $ git clone https://github.com/ampledata/adsbcot.git
+    $ git clone https://github.com/snstac/adsbcot.git
     $ cd adsbcot/
     $ python3 -m pip install .
 

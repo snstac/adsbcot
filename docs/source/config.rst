@@ -39,9 +39,9 @@ port 30003 & forward COT to host 172.17.2.152, port 8087 use following config.in
     COT_URL = tcp://172.17.2.152:8087
     FEED_URL = tcp+beast://172.17.2.122:30003
 
-.. image:: https://raw.githubusercontent.com/ampledata/adsbcot/main/docs/adsbcot_example.png
+.. image:: https://raw.githubusercontent.com/snstac/adsbcot/main/docs/adsbcot_example.png
    :alt: ADSBCOT Example Setup.
-   :target: https://github.com/ampledata/adsbcot/blob/main/docs/adsbcot_example.png
+   :target: https://github.com/snstac/adsbcot/blob/main/docs/adsbcot_example.png
 
 **Example 2**: Connect to dump1090's Raw TCP running on host 172.17.2.122, 
 port 30005 & forward COT to UDP Multicast Group 239.2.3.1 port 6969::

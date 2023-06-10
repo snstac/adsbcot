@@ -16,14 +16,14 @@ ADS-B data can be recevied from dump1090 using the following network formats:
 3. Raw TCP (via `pyModeS <https://github.com/junzis/pyModeS>`_)
 4. Beast TCP (via `pyModeS <https://github.com/junzis/pyModeS>`_)
 
-.. image:: https://raw.githubusercontent.com/ampledata/adsbcot/main/docs/adsbcot_operation.png
+.. image:: https://raw.githubusercontent.com/snstac/adsbcot/main/docs/adsbcot_operation.png
    :alt: ADSBCOT Operation Diagram.
-   :target: https://github.com/ampledata/adsbcot/blob/main/docs/adsbcot_operation.png
+   :target: https://github.com/snstac/adsbcot/blob/main/docs/adsbcot_operation.png
 
 If you'd like to feed ADS-B from another source, consider these tools:
 
-* `adsbxcot <https://github.com/ampledata/adsbxcot>`_: ADSBExchange.com & adsb.fi to TAK Gateway.
-* `stratuxcot <https://github.com/ampledata/stratuxcot>`_: Stratux ADS-B to TAK Gateway.
+* `adsbxcot <https://github.com/snstac/adsbxcot>`_: ADSBExchange.com & adsb.fi to TAK Gateway.
+* `stratuxcot <https://github.com/snstac/stratuxcot>`_: Stratux ADS-B to TAK Gateway.
 
 
 Contents
