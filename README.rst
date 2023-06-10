@@ -1,9 +1,9 @@
 ADS-B to TAK Gateway
 ********************
 
-.. image:: https://raw.githubusercontent.com/ampledata/adsbxcot/main/docs/Screenshot_20201026-142037_ATAK-25p.jpg
-   :alt: Screenshot of ADS-B in ATAK.
-   :target: https://github.com/ampledata/adsbxcot/blob/main/docs/Screenshot_20201026-142037_ATAK.jpg
+.. image:: https://github.com/snstac/pytak/blob/main/docs/atak_screenshot_with_pytak_logo-x25.jpg
+   :alt: ATAK Screenshot with PyTAK Logo.
+   :target: https://github.com/snstac/pytak/blob/main/docs/atak_screenshot_with_pytak_logo.jpg
 
 The ADS-B to TAK Gateway (ADSBCOT) transforms Automatic Dependent 
 Surveillance-Broadcast (ADS-B) aircraft position information into Cursor on 
@@ -28,7 +28,7 @@ If you'd like to feed ADS-B from another source, consider these tools:
 Documentation
 =============
 
-See `'Read the Docs' ADSBCOT documentation <https://adsbcot.readthedocs.io/en/latest/config.html>`_.
+See `ADSBCOT documentation <https://adsbcot.readthedocs.io/>`_.
 
 
 Troubleshooting
