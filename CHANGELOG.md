@@ -1,3 +1,10 @@
+ADSBCOT 6.1.0
+-------------
+Added optional altitude filters: ALT_UPPER, ALT_LOWER
+
+- ALT_UPPER: Upper Altitude Limit, geometric (GNSS / INS) altitude in feet referenced to the WGS84 ellipsoid.
+- ALT_LOWER: Lower Altitude Limit, same ref as ALT_UPPER.
+
 ADSBCOT 6.0.0
 -------------
 Improved support for AirTAK.

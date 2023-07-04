@@ -146,6 +146,19 @@ def adsb_to_cot_xml(  # NOQA pylint: disable=too-many-locals,too-many-branches,t
     squawk: str = str(craft.get("squawk", "")).strip().upper()
     craft_type: str = str(craft.get("t", "")).strip().upper()
 
+    alt_upper: int = int(config.get("ALT_UPPER", "0"))
+    alt_lower: int = int(config.get("ALT_LOWER", "0"))
+
+    alt_geom = craft.get("alt_geom")
+
+    if alt_geom:
+        if alt_upper and alt_upper != 0:
+            if alt_geom > alt_upper:
+                return None
+        if alt_lower and alt_lower != 0:
+            if alt_geom < alt_lower:
+                return None
+
     if flight:
         remarks_fields.append(flight)
         aircotx.set("flight", flight)
@@ -200,7 +213,8 @@ def adsb_to_cot_xml(  # NOQA pylint: disable=too-many-locals,too-many-branches,t
     point.set("lon", str(lon))
     point.set("ce", str(craft.get("nac_p", "9999999.0")))
     point.set("le", str(craft.get("nac_v", "9999999.0")))
-    point.set("hae", aircot.functions.get_hae(craft.get("alt_geom")))
+    # Multiply alt_geom by "Clarke 1880 (international foot)"
+    point.set("hae", aircot.functions.get_hae(alt_geom))
 
     contact: etree.Element = etree.Element("contact")
     contact.set("callsign", callsign)

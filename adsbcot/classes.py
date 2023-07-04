@@ -24,7 +24,7 @@ import warnings
 
 from pathlib import Path
 from typing import Optional
-from urllib.parse import ParseResult, urlparse
+from urllib.parse import ParseResult, ParseResultBytes, urlparse
 
 import aiohttp
 import pytak
@@ -123,7 +123,11 @@ class ADSBWorker(pytak.QueueWorker):
 
     async def get_feed(self, url: bytes) -> None:
         """Poll the ADS-B feed and pass data to the data handler."""
-        async with self.session.get(url) as resp:
+        if not self.session:
+            return
+
+        url_b = url.decode()
+        async with self.session.get(url_b) as resp:
             if resp.status != 200:
                 response_content = await resp.text()
                 self._logger.error("Received HTTP Status %s for %s", resp.status, url)
@@ -166,9 +170,11 @@ class ADSBWorker(pytak.QueueWorker):
             self._logger.info("Using KNOWN_CRAFT: %s", known_craft)
             self.known_craft_db = aircot.read_known_craft(known_craft)
 
-        feed_url: ParseResult = urlparse(url)
+        feed_url: ParseResultBytes = urlparse(url)
 
-        if "http" in feed_url.scheme:
+        url_scheme = feed_url.scheme.decode()
+
+        if "http" in url_scheme:
             async with aiohttp.ClientSession() as self.session:
                 while 1:
                     self._logger.info(
@@ -176,7 +182,7 @@ class ADSBWorker(pytak.QueueWorker):
                     )
                     await self.get_feed(url)
                     await asyncio.sleep(int(poll_interval))
-        elif "file" in feed_url.scheme:
+        elif "file" in url_scheme:
             if importlib.util.find_spec("asyncinotify") is None:
                 while 1:
                     self._logger.info(
@@ -186,13 +192,14 @@ class ADSBWorker(pytak.QueueWorker):
                     await asyncio.sleep(int(poll_interval))
             else:
                 with Inotify() as inotify:
+                    path = feed_url.path.decode()
                     inotify.add_watch(
-                        Path(feed_url.path).parents[0],
+                        Path(path).parents[0],
                         Mask.MODIFY | Mask.CREATE | Mask.MOVE | Mask.MOVED_TO,
                     )
 
                     async for event in inotify:
-                        if str(event.path) == str(feed_url.path):
+                        if str(event.path) == path:
                             await self.get_file_feed(feed_url)
 
     async def get_file_feed(self, feed_url) -> None:
