@@ -126,7 +126,7 @@ class ADSBWorker(pytak.QueueWorker):
         if not self.session:
             return
 
-        url_b = url.decode()
+        url_b = str(url)
         async with self.session.get(url_b) as resp:
             if resp.status != 200:
                 response_content = await resp.text()
@@ -170,9 +170,14 @@ class ADSBWorker(pytak.QueueWorker):
             self._logger.info("Using KNOWN_CRAFT: %s", known_craft)
             self.known_craft_db = aircot.read_known_craft(known_craft)
 
+        alt_upper: int = int(self.config.get("ALT_UPPER", "0"))
+        alt_lower: int = int(self.config.get("ALT_LOWER", "0"))
+        if alt_upper or alt_lower:
+            self._logger.info("Using Altitude Filters: Upper = %s, Lower = %s", alt_upper, alt_lower)
+
         feed_url: ParseResultBytes = urlparse(url)
 
-        url_scheme = feed_url.scheme.decode()
+        url_scheme = str(feed_url.scheme)
 
         if "http" in url_scheme:
             async with aiohttp.ClientSession() as self.session:
@@ -192,7 +197,7 @@ class ADSBWorker(pytak.QueueWorker):
                     await asyncio.sleep(int(poll_interval))
             else:
                 with Inotify() as inotify:
-                    path = feed_url.path.decode()
+                    path = str(feed_url.path)
                     inotify.add_watch(
                         Path(path).parents[0],
                         Mask.MODIFY | Mask.CREATE | Mask.MOVE | Mask.MOVED_TO,
