@@ -3,14 +3,14 @@ Configuration
 
 ADSBCOT's configuration parameters can be set two ways:
 
-1. In an INI-style configuration file, typically ``config.ini``
+1. In an INI-style configuration file, typically ``adsbcot.ini``
 2. As environment variables.
 
 ADSBCOT has the following built-in configuration parameters:
 
 .. describe:: COT_URL (optional)
 
-  Destination for Cursor on Target messages. Defaults to ``udp://239.2.3.1:6969`` (ATAK Multicast UDP / Mesh SA Default)
+  Destination for Cursor on Target messages. Defaults to ``udp+wo://239.2.3.1:6969`` (ATAK 'Mesh SA' default, multicast)
 
 .. describe:: FEED_URL (optional)
 
@@ -19,6 +19,14 @@ ADSBCOT has the following built-in configuration parameters:
 .. describe:: POLL_INTERVAL (optional)
 
   Period, in seconds, to poll the FEED_URL, if the FEED_URL is of the type HTTP.
+
+.. describe:: ALT_UPPER (optional)
+
+  Upper Altitude Limit, geometric (GNSS / INS) altitude in feet referenced to the WGS84 ellipsoid.
+
+.. describe:: ALT_LOWER: (optional)
+
+  Lower Altitude Limit, geometric (GNSS / INS) altitude in feet referenced to the WGS84 ellipsoid.
 
 There are other configuration parameters, including TLS support, are described in the `PyTAK <https://pytak.readthedocs.io/en/latest/config.html>`_ documentation.
 
