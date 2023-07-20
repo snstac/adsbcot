@@ -23,6 +23,10 @@ jobs:
             dh-python debhelper devscripts dput software-properties-common \
             python3-distutils python3-setuptools python3-wheel python3-stdeb
 
+      - name: Install module
+        run: |
+          python3 -m pip install .
+
       - name: Build Debian/Apt sdist_dsc
         run: |
           rm -Rf deb_dist/*
