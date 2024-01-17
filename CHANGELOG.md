@@ -2,7 +2,8 @@
 
 - New for 2024!
 - Fixed formatting of CHANGELOG.md
-- Fixes #28: COT_STALE in documentation
+- Fixes #28: COT_STALE in documentation.
+- Fixes #31: Debian package build is broken.
 - Fixes #37: Move RTFD docs over to Markdown.
 - Fixes #38: Don't discard ImportError exception.
 - Fixes #39: Move CoT generation to PyTAK's `gen_cot_xml()` function.
