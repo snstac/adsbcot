@@ -12,5 +12,4 @@ ADSBCOT is in active use today in a variety of missions.
 
 [Documentation is available here.](https://adsbcot.rtfd.io)
 
-   Use ADS-B Aggregators? Check out my sister software `ADSBXCOT <https://adsbxcot.rtfd.io>`_.
-
+> Use ADS-B Aggregators? Check out [ADSBXCOT](https://adsbxcot.rtfd.io).

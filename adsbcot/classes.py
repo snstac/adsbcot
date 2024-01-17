@@ -99,8 +99,12 @@ class ADSBWorker(pytak.QueueWorker):
             else:
                 continue
 
-            if "~" in icao and not self.config.getboolean("INCLUDE_TISB"):
-                continue
+            if "~" in icao:
+                if not self.config.getboolean("INCLUDE_TISB"):
+                    continue
+            else:
+                if self.config.getboolean("TISB_ONLY"):
+                    continue
 
             known_craft: dict = aircot.get_known_craft(self.known_craft_db, icao, "HEX")
 

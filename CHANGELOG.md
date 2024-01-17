@@ -1,6 +1,10 @@
 ## ADSBCOT beta
 
 - Fixed formatting of CHANGELOG.md
+- Fixes #37: Move RTFD docs over to Markdown.
+- Fixes #38: Don't discard ImportError exception.
+
+
 
 ## ADSBCOT 6.1.0
 
