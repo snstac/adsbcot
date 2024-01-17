@@ -8,7 +8,7 @@ ADS-B data is transformed into TAK data and forwarded to our TAK Server over TCP
 ```ini
 [adsbcot]
 COT_URL = tcp://takserver.example.com:8087
-FEED_URL = tcp+beast://sensor.example.com:30003
+FEED_URL = tcp://sensor.example.com:30003
 ```
 
 ### Usage
@@ -26,7 +26,7 @@ ADS-B data is transformed into TAK data and forwarded to our ATAK Mesh SA Multic
 ```ini
 [adsbcot]
 COT_URL = udp+wo://239.2.3.1:6969
-FEED_URL = tcp+beast://10.1.2.24:30003
+FEED_URL = tcp://10.1.2.24:30003
 ```
 
 ### Usage

@@ -1,7 +1,7 @@
-site_name: ADSBXCOT - Display Aircraft in TAK
-site_url: https://adsbxcot.rtfd.io/
-repo_url: https://github.com/snstac/adsbxcot/
-site_description: A gateway for displaying aircraft tracks from ADS-B Aggregators in TAK Products, including ATAK.
+site_name: ADSBCOT - Display Aircraft in TAK
+site_url: https://adsbcot.rtfd.io/
+repo_url: https://github.com/snstac/adsbcot/
+site_description: Software for monitoring and analyzing aviation surveillance data via the Team Awareness Kit (TAK) ecosystem of products.
 site_author: Greg Albrecht <gba@snstac.com>
 copyright: Copyright Sensors & Signals LLC https://www.snstac.com
 

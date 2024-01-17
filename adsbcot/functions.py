@@ -45,9 +45,7 @@ except ImportError:
     pass
 
 
-def create_tasks(
-    config: SectionProxy, clitool: pytak.CLITool
-) -> Set[pytak.Worker,]:
+def create_tasks(config: SectionProxy, clitool: pytak.CLITool) -> Set[pytak.Worker,]:
     """Create specific coroutine task set for this application.
 
     Parameters
@@ -84,9 +82,12 @@ def create_tasks(
     elif "tcp" in feed_url.scheme:
         if importlib.util.find_spec("pyModeS") is None:
             warnings.warn(
-                (f"Please reinstall {APP_NAME} with pyModeS support:"
-                 f"$ python3 -m pip install {APP_NAME}[with_pymodes]"), 
-                 ImportWarning)
+                (
+                    f"Please reinstall {APP_NAME} with pyModeS support:"
+                    f"$ python3 -m pip install {APP_NAME}[with_pymodes]"
+                ),
+                ImportWarning,
+            )
             raise ValueError
 
         net_queue: asyncio.Queue = asyncio.Queue()
@@ -206,7 +207,9 @@ def adsb_to_cot_xml(  # NOQA pylint: disable=too-many-locals,too-many-branches,t
     else:
         callsign = icao_hex
 
-    _, callsign = aircot.set_name_callsign(icao_hex, reg, craft_type, flight, known_craft)
+    _, callsign = aircot.set_name_callsign(
+        icao_hex, reg, craft_type, flight, known_craft
+    )
     cat = aircot.set_category(cat, known_craft)
     cot_type = aircot.set_cot_type(icao_hex, cat, flight, known_craft)
 
@@ -268,5 +271,7 @@ def adsb_to_cot(
     """Return CoT XML object as an XML string."""
     cot: Optional[etree.Element] = adsb_to_cot_xml(craft, config, known_craft)
     return (
-        b"\n".join([pytak.DEFAULT_XML_DECLARATION, etree.tostring(cot)]) if cot else None
+        b"\n".join([pytak.DEFAULT_XML_DECLARATION, etree.tostring(cot)])
+        if cot
+        else None
     )

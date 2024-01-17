@@ -37,16 +37,18 @@ import adsbcot
 # We don't require inotify, as it only would work on Linux
 try:
     from asyncinotify import Inotify, Mask
-except:
-    pass
+except ImportError as exc:
+    warnings.warn(str(exc))
+    warnings.warn("ADSBCOT ignoring ImportError for: asyncinotify")
 
 # We won't use pyModeS if it isn't installed:
 try:
     import pyModeS.streamer.source
     import pyModeS.streamer.decode
     import pyModeS as pms
-except ImportError:
-    pass
+except ImportError as exc:
+    warnings.warn(str(exc))
+    warnings.warn("ADSBCOT ignoring ImportError for: pyModeS")
 
 
 __author__ = "Greg Albrecht <gba@snstac.com>"
@@ -179,7 +181,9 @@ class ADSBWorker(pytak.QueueWorker):
         alt_upper: int = int(self.config.get("ALT_UPPER", "0"))
         alt_lower: int = int(self.config.get("ALT_LOWER", "0"))
         if alt_upper or alt_lower:
-            self._logger.info("Using Altitude Filters: Upper = %s, Lower = %s", alt_upper, alt_lower)
+            self._logger.info(
+                "Using Altitude Filters: Upper = %s, Lower = %s", alt_upper, alt_lower
+            )
 
         feed_url: ParseResultBytes = urlparse(url)
 
@@ -223,7 +227,9 @@ class ADSBWorker(pytak.QueueWorker):
         if data is None:
             return
 
-        self._logger.info("Retrieved %s ADS-B aircraft messages.", str(len(data) or "No"))
+        self._logger.info(
+            "Retrieved %s ADS-B aircraft messages.", str(len(data) or "No")
+        )
         await self.handle_data(data)
 
 
@@ -416,8 +422,12 @@ class FileWatcher(pytak.QueueWorker):
             else:
                 continue
 
-            if "~" in icao and not self.config.getboolean("INCLUDE_TISB"):
-                continue
+            if "~" in icao:
+                if not self.config.getboolean("INCLUDE_TISB"):
+                    continue
+            else:
+                if self.config.getboolean("TISB_ONLY"):
+                    continue
 
             known_craft: dict = aircot.get_known_craft(self.known_craft_db, icao, "HEX")
 

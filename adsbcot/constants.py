@@ -30,5 +30,5 @@ DEFAULT_FEED_URL: str = "file:///run/dump1090-fa/aircraft.json"
 DEFAULT_POLL_INTERVAL: str = "3"
 
 # Default non-HTTP TCP ports for raw & beast.
-DEFAULT_TCP_RAW_PORT: int = 30002
+DEFAULT_TCP_RAW_PORT: int = 30003
 DEFAULT_TCP_BEAST_PORT: int = 30005

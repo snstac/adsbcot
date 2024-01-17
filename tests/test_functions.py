@@ -57,7 +57,7 @@ TEST_FEED = {
             "version": 2,
             "reg": "test_reg_1234",
             "squawk": "3514",
-            "t": "test_craft_type_1234"
+            "t": "test_craft_type_1234",
         },
         {
             "alt_baro": 37000,

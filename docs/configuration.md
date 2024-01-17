@@ -17,7 +17,7 @@ ADSBCOT has the following built-in configuration parameters:
     - ``tcp+beast://`` A dump1090 Beast binary mode host & port URL (ex. ``tcp+beast://sensor.example.com:30005``).
 
 * **`POLL_INTERVAL`**:
-    * Default: ``30``
+    * Default: ``3`` seconds
 
     If the `FEED_URL` is of type HTTP, the period, in seconds, to poll this URL.
     

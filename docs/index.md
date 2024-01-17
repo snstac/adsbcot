@@ -4,7 +4,7 @@
 
 ADSBCOT is software for monitoring and analyzing aviation surveillance data via the Team Awareness Kit (TAK) ecosystem of products.
 
-ADSBCOT captures & reports real-time ADS-B data received from aircraft (or other airbrone vehicles and drones) into TAK products using native TAK protocols, including Cursor on Target (CoT). 
+ADSBCOT captures & reports real-time ADS-B data received from aircraft (and other airborne vehicles & drones) into TAK products using native TAK protocols, including Cursor on Target (CoT). 
 
 ADSBCOT has been evaluated with WinTAK, iTAK, ATAK & TAK Server.
 

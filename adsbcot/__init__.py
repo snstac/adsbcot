@@ -40,7 +40,6 @@ try:
     from .classes import ADSBWorker, ADSBNetReceiver, ADSBNetWorker  # NOQA
 except ImportError as exc:
     import warnings
-    warnings.warn(
-        "Unable to import required modules, IGNORING for Python 3.6 compat. Original Exception: "
-    )
+
     warnings.warn(str(exc))
+    warnings.warn("ADSBCOT ignoring ImportError - Python 3.6 compat work-around.")
