@@ -21,7 +21,7 @@
 :source: <https://github.com/snstac/adsbcot>
 """
 
-__version__ = "6.2.0-beta5"
+__version__ = "6.2.0-beta7"
 __author__ = "Greg Albrecht <gba@snstac.com>"
 __copyright__ = "Copyright Sensors & Signals LLC https://www.snstac.com"
 __license__ = "Apache License, Version 2.0"

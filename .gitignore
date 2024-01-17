@@ -32,3 +32,4 @@ pylint.log
 redis-server.log
 redis-server/
 __pycache__
+known_craft.csv
