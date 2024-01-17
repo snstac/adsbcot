@@ -13,3 +13,5 @@ ADSBCOT is in active use today in a variety of missions.
 [Documentation is available here.](https://adsbcot.rtfd.io)
 
 > Use ADS-B Aggregators? Check out [ADSBXCOT](https://adsbxcot.rtfd.io).
+>
+> Want a turn-key ADS-B to TAK Gateway? Check out [AirTAK](https://www.snstac.com/store/p/airtak-v1).
