@@ -21,7 +21,7 @@
 import asyncio
 import importlib.util
 import warnings
-import xml.etree.ElementTree as etree
+import xml.etree.ElementTree as ET
 
 from configparser import SectionProxy
 from typing import Optional, Set, Union
@@ -41,8 +41,9 @@ APP_NAME = "adsbcot"
 # We won't use pyModeS if it isn't installed:
 try:
     import pyModeS  # NOQA pylint: disable=unused-import
-except ImportError:
-    pass
+except ImportError as exc:
+    warnings.warn(str(exc))
+    warnings.warn("ADSBCOT ignoring ImportError for: pyModeS")
 
 
 def create_tasks(config: SectionProxy, clitool: pytak.CLITool) -> Set[pytak.Worker,]:
@@ -108,8 +109,9 @@ def adsb_to_cot_xml(  # NOQA pylint: disable=too-many-locals,too-many-branches,t
     craft: dict,
     config: Union[SectionProxy, dict, None] = None,
     known_craft: Optional[dict] = None,
-) -> Optional[etree.Element]:
-    """Serialize a Dump1090 ADS-B aircraft object as Cursor on Target XML.
+) -> Optional[ET.Element]:
+    """
+    Serialize ADS-B data as Cursor on Target.
 
     Parameters
     ----------
@@ -118,6 +120,8 @@ def adsb_to_cot_xml(  # NOQA pylint: disable=too-many-locals,too-many-branches,t
     config : `configparser.SectionProxy`
         Configuration options and values.
         Uses config options: UID_KEY, COT_STALE, COT_HOST_ID
+    kown_craft : `dict`
+        Optional list of know craft to transform CoT data.
 
     Returns
     -------
@@ -139,7 +143,7 @@ def adsb_to_cot_xml(  # NOQA pylint: disable=too-many-locals,too-many-branches,t
     cot_stale: int = int(config.get("COT_STALE", pytak.DEFAULT_COT_STALE))
     cot_host_id: str = config.get("COT_HOST_ID", pytak.DEFAULT_HOST_ID)
 
-    aircotx = etree.Element("_aircot_")
+    aircotx = ET.Element("_aircot_")
     aircotx.set("cot_host_id", cot_host_id)
 
     icao_hex: str = str(craft.get("hex", craft.get("icao", ""))).strip().upper()
@@ -213,54 +217,50 @@ def adsb_to_cot_xml(  # NOQA pylint: disable=too-many-locals,too-many-branches,t
     cat = aircot.set_category(cat, known_craft)
     cot_type = aircot.set_cot_type(icao_hex, cat, flight, known_craft)
 
-    point: etree.Element = etree.Element("point")
-    point.set("lat", str(lat))
-    point.set("lon", str(lon))
-    point.set("ce", str(craft.get("nac_p", "9999999.0")))
-    point.set("le", str(craft.get("nac_v", "9999999.0")))
-    # Multiply alt_geom by "Clarke 1880 (international foot)"
-    point.set("hae", aircot.functions.get_hae(alt_geom))
-
-    contact: etree.Element = etree.Element("contact")
+    contact: ET.Element = ET.Element("contact")
     contact.set("callsign", callsign)
 
-    track: etree.Element = etree.Element("track")
+    track: ET.Element = ET.Element("track")
     track.set("course", str(craft.get("trk", craft.get("track", "9999999.0"))))
     track.set("speed", aircot.functions.get_speed(craft.get("gs")))
 
-    detail = etree.Element("detail")
+    detail = ET.Element("detail")
     detail.append(contact)
     detail.append(track)
+    detail.append(aircotx)
 
     icon = known_craft.get("ICON")
     if icon:
-        usericon = etree.Element("usericon")
+        usericon = ET.Element("usericon")
         usericon.set("iconsetpath", icon)
         detail.append(usericon)
 
-    remarks = etree.Element("remarks")
-
+    remarks = ET.Element("remarks")
     remarks_fields.append(f"{cot_host_id}")
-
     _remarks = " ".join(list(filter(None, remarks_fields)))
-
     remarks.text = _remarks
     detail.append(remarks)
-    detail.append(aircotx)
 
-    root = etree.Element("event")
-    root.set("version", "2.0")
-    root.set("type", cot_type)
-    root.set("uid", cot_uid)
-    root.set("how", "m-g")
-    root.set("time", pytak.cot_time())
-    root.set("start", pytak.cot_time())
-    root.set("stale", pytak.cot_time(cot_stale))
+    cot_d = {
+        "lat": str(lat),
+        "lon": str(lon),
+        "ce": str(craft.get("nac_p", "9999999.0")),
+        "le": str(craft.get("nac_v", "9999999.0")),
+        "hae": aircot.functions.get_hae(craft.get("alt_geom")),  # Multiply alt_geom by "Clarke 1880 (international foot)"
+        "uid": cot_uid,
+        "cot_type": cot_type,
+        "stale": cot_stale,
+    }
+    cot = pytak.gen_cot_xml(**cot_d)
+    cot.set("access", config.get("COT_ACCESS", pytak.DEFAULT_COT_ACCESS))
 
-    root.append(point)
-    root.append(detail)
+    _detail = cot.findall("detail")[0]
+    flowtags = _detail.findall("_flow-tags_")
+    detail.extend(flowtags)
+    cot.remove(_detail)
+    cot.append(detail)
 
-    return root
+    return cot
 
 
 def adsb_to_cot(
@@ -269,9 +269,9 @@ def adsb_to_cot(
     known_craft: Optional[dict] = None,
 ) -> Optional[bytes]:
     """Return CoT XML object as an XML string."""
-    cot: Optional[etree.Element] = adsb_to_cot_xml(craft, config, known_craft)
+    cot: Optional[ET.Element] = adsb_to_cot_xml(craft, config, known_craft)
     return (
-        b"\n".join([pytak.DEFAULT_XML_DECLARATION, etree.tostring(cot)])
+        b"\n".join([pytak.DEFAULT_XML_DECLARATION, ET.tostring(cot)])
         if cot
         else None
     )
