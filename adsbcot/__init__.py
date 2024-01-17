@@ -1,11 +1,13 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 #
-# Copyright 2023 Sensors & Signals LLC
+# Copyright Sensors & Signals LLC https://www.snstac.com
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at http://www.apache.org/licenses/LICENSE-2.0
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
 #
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
@@ -16,13 +18,12 @@
 
 """ADS-B to TAK Gateway.
 
-:author: Greg Albrecht <gba@snstac.com>
 :source: <https://github.com/snstac/adsbcot>
 """
 
 __version__ = "6.2.0-beta5"
 __author__ = "Greg Albrecht <gba@snstac.com>"
-__copyright__ = "Copyright 2023 Sensors & Signals LLC"
+__copyright__ = "Copyright Sensors & Signals LLC https://www.snstac.com"
 __license__ = "Apache License, Version 2.0"
 
 # Python 3.6 test/build work-around:
@@ -37,6 +38,9 @@ try:
     from .functions import adsb_to_cot, create_tasks  # NOQA
 
     from .classes import ADSBWorker, ADSBNetReceiver, ADSBNetWorker  # NOQA
-except ImportError:
+except ImportError as exc:
     import warnings
-    warnings.warn("Unable to import required modules, ignoring (Python 3.6 build work-around).")
+    warnings.warn(
+        "Unable to import required modules, IGNORING for Python 3.6 compat. Original Exception: "
+    )
+    warnings.warn(str(exc))

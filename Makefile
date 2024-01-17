@@ -1,5 +1,5 @@
 #
-# Copyright 2023 Sensors & Signals LLC
+# Copyright Sensors & Signals LLC https://www.snstac.com
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -12,9 +12,6 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-#
-# Author:: Greg Albrecht <gba@snstac.com>
-# License:: Apache License, Version 2.0
 #
 
 this_app = adsbcot
@@ -75,3 +72,7 @@ test_cov:
 
 black:
 	black .
+
+mkdocs:
+	pip install -r docs/requirements.txt
+	mkdocs serve
