@@ -1,3 +1,7 @@
+## ADSBCOT 7.0.1
+
+- Fixes #42: ADSBCOT CoT Events are not showing up in iTAK.
+
 ## ADSBCOT 7.0.0
 
 - New for 2024!

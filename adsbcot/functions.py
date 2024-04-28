@@ -225,6 +225,14 @@ def adsb_to_cot_xml(  # NOQA pylint: disable=too-many-locals,too-many-branches,t
     track.set("speed", aircot.functions.get_speed(craft.get("gs")))
 
     detail = ET.Element("detail")
+
+    # Remarks should always be the first sub-entity within the Detail entity.
+    remarks = ET.Element("remarks")
+    remarks_fields.append(f"{cot_host_id}")
+    _remarks = " ".join(list(filter(None, remarks_fields)))
+    remarks.text = _remarks
+    detail.append(remarks)
+
     detail.append(contact)
     detail.append(track)
     detail.append(aircotx)
@@ -235,18 +243,14 @@ def adsb_to_cot_xml(  # NOQA pylint: disable=too-many-locals,too-many-branches,t
         usericon.set("iconsetpath", icon)
         detail.append(usericon)
 
-    remarks = ET.Element("remarks")
-    remarks_fields.append(f"{cot_host_id}")
-    _remarks = " ".join(list(filter(None, remarks_fields)))
-    remarks.text = _remarks
-    detail.append(remarks)
-
     cot_d = {
         "lat": str(lat),
         "lon": str(lon),
         "ce": str(craft.get("nac_p", "9999999.0")),
         "le": str(craft.get("nac_v", "9999999.0")),
-        "hae": aircot.functions.get_hae(craft.get("alt_geom")),  # Multiply alt_geom by "Clarke 1880 (international foot)"
+        "hae": aircot.functions.get_hae(
+            craft.get("alt_geom")
+        ),  # Multiply alt_geom by "Clarke 1880 (international foot)"
         "uid": cot_uid,
         "cot_type": cot_type,
         "stale": cot_stale,
@@ -271,7 +275,5 @@ def adsb_to_cot(
     """Return CoT XML object as an XML string."""
     cot: Optional[ET.Element] = adsb_to_cot_xml(craft, config, known_craft)
     return (
-        b"\n".join([pytak.DEFAULT_XML_DECLARATION, ET.tostring(cot)])
-        if cot
-        else None
+        b"\n".join([pytak.DEFAULT_XML_DECLARATION, ET.tostring(cot)]) if cot else None
     )
