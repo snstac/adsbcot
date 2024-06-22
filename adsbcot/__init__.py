@@ -18,7 +18,7 @@
 
 """ADS-B to TAK Gateway."""
 
-__version__ = "8.0.0-beta2"
+__version__ = "8.0.0-beta3"
 
 # COMPAT Python 3.6 test/build work-around:
 try:
