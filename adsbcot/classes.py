@@ -194,6 +194,7 @@ class ADSBWorker(pytak.QueueWorker):
                     await asyncio.sleep(int(poll_interval))
         elif "file" in url_scheme:
             if importlib.util.find_spec("asyncinotify") is None:
+                self._logger.info("asyncinotify not installed, using file polling.")
                 while 1:
                     self._logger.info(
                         "%s polling every %ss: %s", self.__class__, poll_interval, url
