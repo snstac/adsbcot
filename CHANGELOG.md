@@ -1,3 +1,8 @@
+## ADSBCOT 8.0.0
+
+Happy Summer Solstice!
+
+
 ## ADSBCOT 7.0.1
 
 - Fixes #42: ADSBCOT CoT Events are not showing up in iTAK.

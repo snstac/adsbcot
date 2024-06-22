@@ -1,4 +1,4 @@
-site_name: ADSBCOT - Display Aircraft in TAK
+site_name: Display Aircraft in TAK - ADS-B to TAK Gateway
 site_url: https://adsbcot.rtfd.io/
 repo_url: https://github.com/snstac/adsbcot/
 site_description: Software for monitoring and analyzing aviation surveillance data via the Team Awareness Kit (TAK) ecosystem of products.

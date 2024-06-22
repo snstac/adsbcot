@@ -16,10 +16,7 @@
 # limitations under the License.
 #
 
-"""Setup for ADSBCOT.
-
-:source: <https://github.com/snstac/adsbcot>
-"""
+"""Setup for ADSBCOT."""
 
 from setuptools import setup
 

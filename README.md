@@ -1,8 +1,6 @@
-.. image:: https://adsbxcot.readthedocs.io/en/latest/atak_screenshot_with_pytak_logo-x25.png
-   :alt: ATAK screenshot with PyTAK logo.
+![ATAK screenshot with PyTAK logo.](https://adsbcot.readthedocs.io/en/latest/media/atak_screenshot_with_pytak_logo-x25.png)
 
-Display Aircraft in TAK 
-************************
+# Display Aircraft in TAK - ADS-B to TAK Gateway 
 
 ADSBCOT is software for monitoring and analyzing aviation surveillance data via the Team Awareness Kit (TAK) ecosystem of products.
 
@@ -12,14 +10,15 @@ ADSBCOT has been evaluated with WinTAK, iTAK, ATAK & TAK Server.
 
 ADSBCOT is in active use today in a variety of missions.
 
-`Documentation is available here. <https://adsbcot.rtfd.io>`_
+[Documentation is available here.](https://adsbcot.rtfd.io)
 
-   Use ADS-B Aggregators? Check out my sister software `ADSBXCOT <https://adsbxcot.rtfd.io>`_.
 
-   Want a turn-key ADS-B to TAK Gateway? Check out `AirTAK <https://www.snstac.com/store/p/airtak-v1>`_.
+   Use ADS-B Aggregators? Check out my sister software [ADSBXCOT](https://adsbxcot.rtfd.io).
 
-License
-=======
+   Want a turn-key ADS-B to TAK Gateway? Check out [AirTAK](https://www.snstac.com/store/p/airtak-v1).
+
+
+## Copyright & License
 
 Copyright Sensors & Signals LLC https://www.snstac.com
 
