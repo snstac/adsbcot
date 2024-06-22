@@ -18,11 +18,6 @@
 
 """ADSBCOT Constants."""
 
-__author__ = "Greg Albrecht <gba@snstac.com>"
-__copyright__ = "Copyright Sensors & Signals LLC https://www.snstac.com"
-__license__ = "Apache License, Version 2.0"
-
-
 # Feed URL to use out of the box, in this case the JSON from the local filesystem.
 DEFAULT_FEED_URL: str = "file:///run/dump1090-fa/aircraft.json"
 

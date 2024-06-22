@@ -31,10 +31,6 @@ import aircot
 import pytak
 import adsbcot
 
-__author__ = "Greg Albrecht <gba@snstac.com>"
-__copyright__ = "Copyright Sensors & Signals LLC https://www.snstac.com"
-__license__ = "Apache License, Version 2.0"
-
 
 APP_NAME = "adsbcot"
 

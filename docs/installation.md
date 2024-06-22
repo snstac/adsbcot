@@ -8,12 +8,12 @@ Install ADSBCOT, and prerequisite packages of [PyTAK](https://pytak.rtfd.io) & [
 
 ```sh linenums="1"
 sudo apt update
-wget https://github.com/ampledata/aircot/releases/latest/download/python3-aircot_latest_all.deb
-sudo apt install -f ./python3-aircot_latest_all.deb
-wget https://github.com/ampledata/pytak/releases/latest/download/python3-pytak_latest_all.deb
-sudo apt install -f ./python3-pytak_latest_all.deb
-wget https://github.com/ampledata/adsbcot/releases/latest/download/python3-adsbcot_latest_all.deb
-sudo apt install -f ./python3-adsbcot_latest_all.deb
+wget https://github.com/ampledata/aircot/releases/latest/download/aircot_latest_all.deb
+sudo apt install -f ./aircot_latest_all.deb
+wget https://github.com/ampledata/pytak/releases/latest/download/pytak_latest_all.deb
+sudo apt install -f ./pytak_latest_all.deb
+wget https://github.com/ampledata/adsbcot/releases/latest/download/adsbcot_latest_all.deb
+sudo apt install -f ./adsbcot_latest_all.deb
 ```
 
 > **N.B.** This installation method only supports `http://` & `file://` based ADS-B data feeds. To use TCP RAW (SBS-1) or TCP binary Beast protocols, you'll need to install pyModeS, see below.

@@ -51,11 +51,6 @@ except ImportError as exc:
     warnings.warn("ADSBCOT ignoring ImportError for: pyModeS")
 
 
-__author__ = "Greg Albrecht <gba@snstac.com>"
-__copyright__ = "Copyright Sensors & Signals LLC https://www.snstac.com"
-__license__ = "Apache License, Version 2.0"
-
-
 class ADSBWorker(pytak.QueueWorker):
     """Read ADS-B Data from inputs, serialize to CoT, and put on TX queue."""
 
