@@ -2,6 +2,20 @@
 
 Happy Summer Solstice!
 
+- Rewrote GitHub actions, moved most logic to shell script and Makefile.
+- Renamed Debian package from python3-adsbcot to adsbcot.
+- Standardized Makefile for all PyTAK based programs.
+- Cleaned, simplified and expanded documentation.
+- Created Makefile jobs for Debian packaging and PyTAK customization.
+- Moved all media to media sub directory under docs/.
+- Converted README.rst to README.md.
+- Style & Linting of code.
+- Removed support for Python 3.6.
+- Removed support for DUMP1090_URL configuration parameter.
+- Added Debian service: /lib/systemd/system/adsbcot.service
+- Added Debian conffile: /etc/default/adsbcot
+- Added Debian postinst with service config, debug and startup instructions.
+- Added with_asyncinotify as an optional extra.
 
 ## ADSBCOT 7.0.1
 
