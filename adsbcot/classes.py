@@ -152,13 +152,7 @@ class ADSBWorker(pytak.QueueWorker):
 
     async def run(self, _=-1) -> None:
         """Run this Thread, Reads from Pollers."""
-        dump1090_url: bytes = self.config.get("DUMP1090_URL", "")
-        if dump1090_url:
-            warnings.warn(
-                "DUMP1090_URL setting is DEPRECATED. Please use FEED_URL instead."
-            )
-
-        url: bytes = self.config.get("FEED_URL", dump1090_url)
+        url: bytes = self.config.get("FEED_URL")
         if not url:
             raise ValueError("Please specify a FEED_URL.")
 
@@ -199,7 +193,7 @@ class ADSBWorker(pytak.QueueWorker):
                     self._logger.info(
                         "%s polling every %ss: %s", self.__class__, poll_interval, url
                     )
-                    await self.get_file_feed(url)
+                    await self.get_file_feed(feed_url)
                     await asyncio.sleep(int(poll_interval))
             else:
                 with Inotify() as inotify:
@@ -213,14 +207,25 @@ class ADSBWorker(pytak.QueueWorker):
                         if str(event.path) == path:
                             await self.get_file_feed(feed_url)
 
-    async def get_file_feed(self, feed_url) -> None:
+    async def get_file_feed(self, feed_url: ParseResultBytes) -> None:
         """Read data from an aircraft JSON file."""
-        jdata = {}
+        jdata: dict = {}
+        feed_data: str = ""
+
         with open(feed_url.path, "r", encoding="UTF-8") as feed_fd:
-            jdata = json.loads(feed_fd.read())
+            feed_data = feed_fd.read()
+
+        if not feed_data:
+            self._logger.info("No data returned from FEED_URL=%s", feed_url.path)
+            return
+
+        jdata = json.loads(feed_data)
 
         data = jdata.get("aircraft", jdata.get("ac"))
-        if data is None:
+        if not data:
+            self._logger.info(
+                "No aircraft data returned from FEED_URL=%s", feed_url.path
+            )
             return
 
         self._logger.info(
