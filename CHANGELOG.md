@@ -1,4 +1,4 @@
-## ADSBCOT 8.0.1
+## ADSBCOT 8.0.2
 
 Happy Summer Solstice!
 
