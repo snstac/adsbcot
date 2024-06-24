@@ -7,12 +7,12 @@ There are several methods of installing ADSBCOT. They are listed below, in order
 Install ADSBCOT, and prerequisite packages of [PyTAK](https://pytak.rtfd.io) & [AIRCOT](https://aircot.rtfd.io).
 
 ```sh linenums="1"
-sudo apt update
-wget https://github.com/ampledata/aircot/releases/latest/download/aircot_latest_all.deb
+sudo apt update -qq
+wget https://github.com/snstac/aircot/releases/latest/download/aircot_latest_all.deb
 sudo apt install -f ./aircot_latest_all.deb
-wget https://github.com/ampledata/pytak/releases/latest/download/pytak_latest_all.deb
+wget https://github.com/snstac/pytak/releases/latest/download/pytak_latest_all.deb
 sudo apt install -f ./pytak_latest_all.deb
-wget https://github.com/ampledata/adsbcot/releases/latest/download/adsbcot_latest_all.deb
+wget https://github.com/snstac/adsbcot/releases/latest/download/adsbcot_latest_all.deb
 sudo apt install -f ./adsbcot_latest_all.deb
 ```
 
