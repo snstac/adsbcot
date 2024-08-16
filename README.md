@@ -11,7 +11,7 @@ ADSBCOT captures & reports real-time ADS-B data received from aircraft (or other
 
    Use ADS-B Aggregators with [ADSBXCOT](https://adsbxcot.rtfd.io).
 
-   Buy an [AirTAK](https://www.snstac.com/store/p/airtak-v1), a portable ADS-B to TAK Gateway.
+   The stand-alone [AirTAK](https://www.snstac.com/store/p/airtak-v1) is a portable ADS-B to TAK Gateway.
 
 
 ## Copyright & License
