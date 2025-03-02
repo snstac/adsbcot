@@ -21,7 +21,6 @@ RUN apt install -y rtl-sdr
 RUN python3 -m pip install asyncinotify
 RUN python3 -m pip install pymodes
 RUN python3 -m pip install pyrtlsdr
-#RUN python3 -m pip install adsbcot
 
 # Build adsbcot
 COPY . /adsbcot/
@@ -30,7 +29,7 @@ RUN rm -R /adsbcot/
 
 # Copy adsbcot configuration
 RUN mkdir /etc/adsbcot/
-COPY adsbcot.conf /etc/adsbcot/adsbcot.conf
+COPY adsbcot-docker-example.conf /etc/adsbcot/adsbcot.conf
 
 # Copy start.sh script and define default command for the container
 COPY start.sh /start.sh
