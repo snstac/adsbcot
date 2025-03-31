@@ -10,6 +10,13 @@
 - Fixed #49: Windows MIME Type error.
 - Fixed #26: Added Dockerfile for Docker support (Thanks @chriselsen)
 - Fixed #43: Inotify file moved, reading stops.
+- Updated Github Workflows.
+- Major version bump from 8.0 to 9.0.
+- Moved adsbcot module to src/ directory.
+- Moved VERSION to flat-file.
+- Refactored handle_data to split out parsing fuctions.
+- Added Logging to functions.
+- 
 
 ## ADSBCOT 8.0.2
 
