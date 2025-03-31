@@ -1,10 +1,10 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-"""ADSBXCOT Class Tests."""
+"""ADSBCOT Class Tests."""
 
 import pytest
-from adsbxcot.classes import ADSBXWorker
+from adsbcot.classes import ADSBWorker
 from configparser import ConfigParser, SectionProxy
 import asyncio
 import logging
@@ -34,7 +34,7 @@ def real_queue():
 
 @pytest.fixture
 def real_worker(real_queue, config):
-    return ADSBXWorker(real_queue, config)
+    return ADSBWorker(real_queue, config)
 
 
 class MockWriter:
@@ -116,8 +116,8 @@ async def test_handle_data_empty_list(real_worker):
 
 
 @pytest.mark.asyncio
-def test_ADSBXWorker():
-    """Tests the ADSBXWorker class."""
+def test_ADSBWorker():
+    """Tests the ADSBWorker class."""
     config = ConfigParser()
     config.read_dict(
         {
@@ -129,7 +129,7 @@ def test_ADSBXWorker():
         }
     )
     config = config["DEFAULT"]
-    worker = ADSBXWorker(asyncio.Queue(), config)
+    worker = ADSBWorker(asyncio.Queue(), config)
     assert worker.config == config
     # assert worker.known_craft_db == {}
     assert worker.queue.empty()
@@ -210,7 +210,7 @@ async def test_process_craft_empty_cot(real_worker):
         with patch.object(
             real_worker, "calc_altitude", return_value={"alt_baro": 37000}
         ):
-            with patch("adsbxcot.adsbx_to_cot", return_value=None):
+            with patch("adsbcot.adsb_to_cot", return_value=None):
                 result = await real_worker.process_craft(craft)
                 assert result is None
 
