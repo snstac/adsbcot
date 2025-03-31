@@ -16,17 +16,16 @@
 # limitations under the License.
 #
 
-"""ADS-B to TAK Gateway."""
+"""ADSBCOT Constants."""
 
-__version__ = "8.1.0"
+# Feed URL to use out of the box, in this case the JSON from the local filesystem.
+DEFAULT_FEED_URL: str = "file:///run/dump1090-fa/aircraft.json"
 
-from .constants import (  # NOQA
-    DEFAULT_POLL_INTERVAL,
-    DEFAULT_TCP_RAW_PORT,
-    DEFAULT_TCP_BEAST_PORT,
-    DEFAULT_FEED_URL,
-)
+# Default HTTP JSON feed polling interval, in seconds.
+DEFAULT_POLL_INTERVAL: str = "3"
 
-from .functions import adsb_to_cot, create_tasks  # NOQA
+# Default non-HTTP TCP ports for raw & beast.
+DEFAULT_TCP_RAW_PORT: int = 30003
+DEFAULT_TCP_BEAST_PORT: int = 30005
 
-from .classes import ADSBWorker, ADSBNetReceiver, ADSBNetWorker  # NOQA
+DEFAULT_RAPIDAPI_HOST: str = "adsb-exchange1.p.rapidapi.com"

@@ -20,6 +20,8 @@
 
 import asyncio
 import importlib.util
+import logging
+import os
 import warnings
 import xml.etree.ElementTree as ET
 
@@ -31,15 +33,17 @@ import aircot
 import pytak
 import adsbcot
 
-
-APP_NAME = "adsbcot"
-
 # We won't use pyModeS if it isn't installed:
 try:
     import pyModeS  # NOQA pylint: disable=unused-import
 except ImportError as exc:
     warnings.warn(str(exc))
     warnings.warn("ADSBCOT ignoring ImportError for: pyModeS")
+
+
+APP_NAME = "adsbcot"
+Logger = logging.getLogger(__name__)
+Debug = bool(os.getenv("DEBUG", False))
 
 
 def create_tasks(config: SectionProxy, clitool: pytak.CLITool) -> Set[pytak.Worker,]:
@@ -124,10 +128,15 @@ def adsb_to_cot_xml(  # NOQA pylint: disable=too-many-locals,too-many-branches,t
     `xml.etree.ElementTree.Element`
         Cursor-On-Target XML ElementTree object.
     """
+    lastPosition = craft.get("lastPosition")
+    if lastPosition:
+        craft.update(lastPosition)
+
     lat = craft.get("lat")
     lon = craft.get("lon")
 
     if lat is None or lon is None:
+        Logger.warning(f"lat={lat} lon={lon}")
         return None
 
     known_craft = known_craft or {}
@@ -139,8 +148,8 @@ def adsb_to_cot_xml(  # NOQA pylint: disable=too-many-locals,too-many-branches,t
     cot_stale: int = int(config.get("COT_STALE", pytak.DEFAULT_COT_STALE))
     cot_host_id: str = config.get("COT_HOST_ID", pytak.DEFAULT_HOST_ID)
 
-    aircotx = ET.Element("_aircot_")
-    aircotx.set("cot_host_id", cot_host_id)
+    __adsb = ET.Element("__adsb")
+    __adsb.set("cot_host_id", cot_host_id)
 
     icao_hex: str = str(craft.get("hex", craft.get("icao", ""))).strip().upper()
     reg: str = str(craft.get("reg", craft.get("r", ""))).strip().upper()
@@ -155,36 +164,49 @@ def adsb_to_cot_xml(  # NOQA pylint: disable=too-many-locals,too-many-branches,t
     alt_geom = craft.get("alt_geom")
 
     if alt_geom:
+        remarks_fields.append(f"Alt:{craft.get('alt_geom')}")
         if alt_upper and alt_upper != 0:
             if alt_geom > alt_upper:
+                Logger.warning(
+                    f"alt_upper={alt_upper} alt_geom={alt_geom} "
+                    "altitude too high, ignoring COT"
+                )
                 return None
         if alt_lower and alt_lower != 0:
             if alt_geom < alt_lower:
+                Logger.warning(
+                    f"alt_lower={alt_lower} alt_geom={alt_geom} "
+                    "altitude too low, ignoring COT"
+                )
                 return None
+    __adsb.set("alt_geom", str(craft.get("alt_geom")))
+    __adsb.set("x_alt_geom", str(craft.get("x_alt_geom")))
+    __adsb.set("alt_baro", str(craft.get("alt_baro")))
+    __adsb.set("x_alt_baro_offset", str(craft.get("x_alt_baro_offset")))
 
     if flight:
         remarks_fields.append(flight)
-        aircotx.set("flight", flight)
+        __adsb.set("flight", flight)
 
     if reg:
         remarks_fields.append(reg)
-        aircotx.set("reg", reg)
+        __adsb.set("reg", reg)
 
     if squawk:
         remarks_fields.append(f"Squawk: {squawk}")
-        aircotx.set("squawk", squawk)
+        __adsb.set("squawk", squawk)
 
     if icao_hex:
         remarks_fields.append(icao_hex)
-        aircotx.set("icao", icao_hex)
+        __adsb.set("icao", icao_hex)
 
     if cat:
         remarks_fields.append(f"Cat.: {cat}")
-        aircotx.set("cat", cat)
+        __adsb.set("cat", cat)
 
     if craft_type:
         remarks_fields.append(f"Type:{craft_type}")
-        aircotx.set("type", craft_type)
+        __adsb.set("type", craft_type)
 
     cot_uid: str = ""
     if "REG" in uid_key and reg:
@@ -198,6 +220,7 @@ def adsb_to_cot_xml(  # NOQA pylint: disable=too-many-locals,too-many-branches,t
     elif flight:
         cot_uid = f"FLIGHT-{flight}"
     else:
+        Logger.warning(f"cot_uid={cot_uid}")
         return None
 
     if flight:
@@ -231,7 +254,7 @@ def adsb_to_cot_xml(  # NOQA pylint: disable=too-many-locals,too-many-branches,t
 
     detail.append(contact)
     detail.append(track)
-    detail.append(aircotx)
+    detail.append(__adsb)
 
     icon = known_craft.get("ICON")
     if icon:
@@ -245,7 +268,7 @@ def adsb_to_cot_xml(  # NOQA pylint: disable=too-many-locals,too-many-branches,t
         "ce": str(craft.get("nac_p", "9999999.0")),
         "le": str(craft.get("nac_v", "9999999.0")),
         "hae": aircot.functions.get_hae(
-            craft.get("alt_geom")
+            craft.get("alt_geom", craft.get("alt_geom_x"))
         ),  # Multiply alt_geom by "Clarke 1880 (international foot)"
         "uid": cot_uid,
         "cot_type": cot_type,

@@ -1,11 +1,13 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 #
-# Copyright 2023 Sensors & Signals LLC
+# Copyright Sensors & Signals LLC https://www.snstac.com
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at http://www.apache.org/licenses/LICENSE-2.0
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
 #
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
@@ -20,11 +22,6 @@ import unittest
 import xml.etree.ElementTree as etree
 
 import adsbcot
-
-__author__ = "Greg Albrecht <gba@snstac.com>"
-__copyright__ = "Copyright 2023 Sensors & Signals LLC"
-__license__ = "Apache License, Version 2.0"
-
 
 TEST_FEED = {
     "aircraft": [
@@ -126,6 +123,31 @@ TEST_FEED = {
     "now": 1602849987.1,
 }
 
+ADSBX_TEST_DATA = {
+    "hex": "7805dc",
+    "type": "adsb_icao",
+    "flight": "CKK223  ",
+    "gs": 541.8,
+    "track": 124.78,
+    "baro_rate": -64,
+    "category": "A5",
+    "lastPosition": {
+        "lat": 37.370833,
+        "lon": -124.300033,
+        "nic": 8,
+        "rc": 186,
+        "seen_pos": 101.437,
+    },
+    "version": 2,
+    "nac_v": 1,
+    "sil_type": "perhour",
+    "mlat": [],
+    "tisb": [],
+    "messages": 151,
+    "seen": 12.4,
+    "rssi": -18.2,
+}
+
 
 class FunctionsTestCase(unittest.TestCase):
     """
@@ -183,6 +205,31 @@ class FunctionsTestCase(unittest.TestCase):
         del craft["lon"]
         cot = adsbcot.functions.adsb_to_cot_xml(craft)
         assert cot is None
+
+    def test_adsbx_to_cot_xml(self):
+        """Test that adsb_to_cot serializses ADS-B as valid Cursor on Target XML Object."""
+        craft = ADSBX_TEST_DATA
+        print("ADSBX Data: %s", craft)
+        cot = adsbcot.functions.adsb_to_cot_xml(craft)
+        print("COT: %s", cot)
+        assert isinstance(cot, etree.Element)
+        assert cot.tag == "event"
+        assert cot.attrib["version"] == "2.0"
+        assert cot.attrib["type"] == "a-n-A-C-F"
+        assert cot.attrib["uid"] == "ICAO-7805DC"
+
+        point = cot.findall("point")
+        assert point[0].tag == "point"
+        assert point[0].attrib["lat"] == "37.370833"
+        assert point[0].attrib["lon"] == "-124.300033"
+        assert point[0].attrib["hae"] == "9999999.0"
+
+        detail = cot.findall("detail")
+        assert detail[0].tag == "detail"
+
+        track = detail[0].findall("track")
+        assert track[0].attrib["course"] == "124.78"
+        assert track[0].attrib["speed"] == "278.72575919999997"
 
 
 if __name__ == "__main__":

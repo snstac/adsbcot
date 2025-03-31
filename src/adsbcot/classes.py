@@ -25,7 +25,7 @@ import os
 import warnings
 
 from pathlib import Path
-from typing import Optional
+from typing import Optional, Union
 from urllib.parse import ParseResult, ParseResultBytes, urlparse
 
 import aiohttp
@@ -37,7 +37,7 @@ import adsbcot
 # Note: inotify is optional and only functional on Linux systems.
 try:
     from asyncinotify import Inotify, Mask
-except ImportError as exc:
+except (ImportError, AttributeError) as exc:
     warnings.warn(str(exc))
     warnings.warn("ADSBCOT ignoring ImportError for: asyncinotify")
 
@@ -60,6 +60,7 @@ class ADSBWorker(pytak.QueueWorker):
         self.known_craft_db: Optional[dict] = None
         self.session: Optional[aiohttp.ClientSession] = None
         self.uid_key: str = self.config.get("UID_KEY", "ICAO")
+        self.altitudes: dict = {}
 
         known_craft = self.config.get("KNOWN_CRAFT")
         if known_craft and os.path.exists(known_craft):
@@ -86,52 +87,114 @@ class ADSBWorker(pytak.QueueWorker):
         i = 1
         for craft in data:
             i += 1
-            if not isinstance(craft, dict):
-                self._logger.warning("Aircraft list item was not a Python `dict`.")
-                continue
-
-            icao: str = craft.get("hex", "")
-            if icao:
-                icao = icao.strip().upper()
-            else:
-                continue
-
-            if "~" in icao:
-                if not self.config.getboolean("INCLUDE_TISB"):
-                    continue
-            else:
-                if self.config.getboolean("TISB_ONLY"):
-                    continue
-
-            known_craft: dict = aircot.get_known_craft(self.known_craft_db, icao, "HEX")
-
-            # Skip if we're using known_craft CSV and this Craft isn't found:
-            if (
-                self.known_craft_db
-                and not known_craft
-                and not self.config.getboolean("INCLUDE_ALL_CRAFT")
-            ):
-                continue
-
-            event: Optional[bytes] = adsbcot.adsb_to_cot(
-                craft, self.config, known_craft
-            )
-
-            if not event:
-                self._logger.debug("Empty COT Event for craft=%s", craft)
-                continue
-
+            icao = await self.process_craft(craft)
             self._logger.debug("Handling %s/%s ICAO: %s", i, lod, icao)
-            await self.put_queue(event)
+
+    async def process_craft(self, craft: dict) -> Optional[str]:
+        """Process a single aircraft data dictionary.
+        Parameters
+        ----------
+        craft : `dict`
+            Dictionary containing aircraft data.
+
+        Returns
+        -------
+        Optional[str]
+            The ICAO code of the aircraft, or None if not found.
+        """
+        if not isinstance(craft, dict):
+            self._logger.warning("Aircraft list item was not a Python `dict`.")
+            return None
+
+        icao: str = craft.get("hex", craft.get("icao", ""))
+        if icao:
+            icao = icao.strip().upper()
+        else:
+            self._logger.warning("No ICAO code found in craft data.")
+            return None
+
+        if "~" in icao:
+            if not self.config.getboolean("INCLUDE_TISB"):
+                self._logger.debug("Skipping TIS-B data: %s", icao)
+                return None
+        else:
+            if self.config.getboolean("TISB_ONLY"):
+                self._logger.debug("Skipping non-TIS-B data: %s", icao)
+                return None
+
+        known_craft: dict = aircot.get_known_craft(self.known_craft_db, icao, "HEX")
+
+        # Skip if we're using known_craft CSV and this Craft isn't found:
+        if (
+            self.known_craft_db
+            and not known_craft
+            and not self.config.getboolean("INCLUDE_ALL_CRAFT")
+        ):
+            self._logger.debug("Skipping unknown craft: %s", icao)
+            return None
+
+        ref_alts = self.calc_altitude(craft)
+        craft.update(ref_alts)
+
+        if not craft:
+            self._logger.debug("No altitude data for craft: %s", icao)
+            return None
+
+        event: Optional[bytes] = adsbcot.adsb_to_cot(craft, self.config, known_craft)
+
+        if not event:
+            self._logger.debug("Empty COT Event for craft=%s", craft)
+            return None
+
+        await self.put_queue(event)
+        return icao
+
+    def calc_altitude(self, craft: dict) -> dict:
+        """Calculate altitude based on barometric and geometric altitude."""
+        alt_baro = craft.get("alt_baro", "")
+        alt_geom = craft.get("alt_geom", "")
+
+        if not alt_baro:
+            return {}
+
+        if alt_baro == "ground":
+            return {}
+
+        alt_baro = float(alt_baro)
+        if alt_geom:
+            self.altitudes["alt_geom"] = float(alt_geom)
+            self.altitudes["alt_baro"] = alt_baro
+        elif "alt_baro" in self.altitudes and "alt_geom" in self.altitudes:
+            ref_alt_baro = float(self.altitudes["alt_baro"])
+            alt_baro_offset = alt_baro - ref_alt_baro
+            return {
+                "x_alt_baro_offset": alt_baro_offset,
+                "x_alt_geom": ref_alt_baro + alt_baro_offset,
+            }
+
+        return {}
 
     async def get_feed(self, url: bytes) -> None:
         """Poll the ADS-B feed and pass data to the data handler."""
-        if not self.session:
-            self._logger.warning("No aiohttp session available.")
+        if self.session is None or self.session.closed:
+            self._logger.error("Session is closed, cannot proceed.")
             return
 
         url_b = str(url)
-        async with self.session.get(url_b) as resp:
+
+        api_key: str = self.config.get("API_KEY")
+        headers = {"api-auth": api_key}
+
+        # Support for either direct ADSBX API, or RapidAPI:
+        if "rapidapi" in url_b.lower():
+            headers = {
+                "x-rapidapi-key": api_key,
+                "x-rapidapi-host": self.config.get(
+                    "RAPIDAPI_HOST", adsbcot.DEFAULT_RAPIDAPI_HOST
+                ),
+            }
+
+        async with self.session.get(url_b, headers=headers) as resp:
             if resp.status != 200:
                 response_content = await resp.text()
                 self._logger.error("Received HTTP Status %s for %s", resp.status, url)
@@ -153,19 +216,49 @@ class ADSBWorker(pytak.QueueWorker):
             )
             await self.handle_data(data)
 
+    async def get_file_feed(self, feed_url: ParseResultBytes) -> None:
+        """Read data from an aircraft JSON file."""
+        jdata: dict = {}
+        feed_data: str = ""
+
+        with open(feed_url.path, "r", encoding="UTF-8") as feed_fd:
+            feed_data = feed_fd.read()
+
+        if not feed_data:
+            self._logger.info("No data returned from FEED_URL=%s", feed_url.path)
+            return
+
+        jdata = json.loads(feed_data)
+
+        data = jdata.get("aircraft", jdata.get("ac"))
+        if not data:
+            self._logger.info(
+                "No aircraft data returned from FEED_URL=%s", feed_url.path
+            )
+            return
+
+        self._logger.info(
+            "Retrieved %s ADS-B aircraft messages.", str(len(data) or "No")
+        )
+        await self.handle_data(data)
+
     async def run(self, _=-1) -> None:
         """Run this Thread, Reads from Pollers."""
-        url: bytes = self.config.get("FEED_URL")
+        self._logger.info("Running %s", self.__class__)
+
+        url: Optional[bytes] = self.config.get("FEED_URL")
         if not url:
             raise ValueError("Please specify a FEED_URL.")
 
-        self._logger.info("Running %s", self.__class__)
+        poll_interval: Union[int, str, None] = self.config.get("POLL_INTERVAL")
+        if poll_interval == "" or poll_interval is None:
+            self._logger.info(
+                "POLL_INTERVAL not set, using default of %s seconds.",
+                adsbcot.DEFAULT_POLL_INTERVAL,
+            )
+            poll_interval = adsbcot.DEFAULT_POLL_INTERVAL
 
         known_craft: bytes = self.config.get("KNOWN_CRAFT", "")
-        poll_interval: bytes = self.config.get(
-            "POLL_INTERVAL", adsbcot.DEFAULT_POLL_INTERVAL
-        )
-
         if known_craft:
             self._logger.info("Using KNOWN_CRAFT: %s", known_craft)
             self.known_craft_db = aircot.read_known_craft(known_craft)
@@ -211,32 +304,6 @@ class ADSBWorker(pytak.QueueWorker):
                             raise RuntimeError("inotify watch was removed.")
                         if str(event.path) == path:
                             await self.get_file_feed(feed_url)
-
-    async def get_file_feed(self, feed_url: ParseResultBytes) -> None:
-        """Read data from an aircraft JSON file."""
-        jdata: dict = {}
-        feed_data: str = ""
-
-        with open(feed_url.path, "r", encoding="UTF-8") as feed_fd:
-            feed_data = feed_fd.read()
-
-        if not feed_data:
-            self._logger.info("No data returned from FEED_URL=%s", feed_url.path)
-            return
-
-        jdata = json.loads(feed_data)
-
-        data = jdata.get("aircraft", jdata.get("ac"))
-        if not data:
-            self._logger.info(
-                "No aircraft data returned from FEED_URL=%s", feed_url.path
-            )
-            return
-
-        self._logger.info(
-            "Retrieved %s ADS-B aircraft messages.", str(len(data) or "No")
-        )
-        await self.handle_data(data)
 
 
 class ADSBNetWorker(ADSBWorker):
@@ -383,7 +450,7 @@ class ADSBNetReceiver(pytak.QueueWorker):  # pylint: disable=too-few-public-meth
                 self.queue.put_nowait(received)
 
 
-class FileWatcher(pytak.QueueWorker):
+class xFileWatcher(pytak.QueueWorker):
     """Read ADS-B Data from a file, serialize to CoT, and put on TX queue."""
 
     def __init__(self, queue, config) -> None:
