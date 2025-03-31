@@ -78,7 +78,8 @@ def create_tasks(config: SectionProxy, clitool: pytak.CLITool) -> Set[pytak.Work
     feed_url: ParseResult = urlparse(config.get("FEED_URL", ""))
 
     # ADS-B Workers (receivers):
-    if feed_url.scheme in ["http", "file"]:
+    if feed_url.scheme in ["http", "file", "ws", "wss"]:
+        # HTTP, WebSocket, or file-based input:
         tasks.add(adsbcot.ADSBWorker(clitool.tx_queue, config))
     elif "tcp" in feed_url.scheme:
         if importlib.util.find_spec("pyModeS") is None:
@@ -132,17 +133,18 @@ def adsb_to_cot_xml(  # NOQA pylint: disable=too-many-locals,too-many-branches,t
     if lastPosition:
         craft.update(lastPosition)
 
-    lat = craft.get("lat")
-    lon = craft.get("lon")
+    lat = craft.get("lat", craft.get("Lat"))
+    lon = craft.get("lon", craft.get("Lon", craft.get("Lng")))
 
     if lat is None or lon is None:
-        Logger.warning(f"lat={lat} lon={lon}")
+        Logger.warning(f"No value for lat={lat} lon={lon}")
         return None
 
+    remarks_fields = []
     known_craft = known_craft or {}
     config = config or {}
-
-    remarks_fields: list = []
+    category = None
+    tisb: bool = False
 
     uid_key: str = config.get("UID_KEY", "ICAO")
     cot_stale: int = int(config.get("COT_STALE", pytak.DEFAULT_COT_STALE))
@@ -151,12 +153,26 @@ def adsb_to_cot_xml(  # NOQA pylint: disable=too-many-locals,too-many-branches,t
     __adsb = ET.Element("__adsb")
     __adsb.set("cot_host_id", cot_host_id)
 
-    icao_hex: str = str(craft.get("hex", craft.get("icao", ""))).strip().upper()
-    reg: str = str(craft.get("reg", craft.get("r", ""))).strip().upper()
-    flight: str = str(craft.get("flight", "")).strip().upper()
-    cat: str = str(craft.get("category", "")).strip().upper()
-    squawk: str = str(craft.get("squawk", "")).strip().upper()
-    craft_type: str = str(craft.get("t", "")).strip().upper()
+    # Stratux reports Icao_addr as an int:
+    icao_addr: str = aircot.icao_int_to_hex(
+        craft.get("icao_addr", craft.get("Icao_addr", 0))
+    )
+    icao_hex: str = str(craft.get("hex", craft.get("icao", icao_addr))).strip().upper()
+
+    _flight = craft.get("flight", craft.get("Tail", ""))
+    flight: str = str(_flight).strip().upper()
+
+    _reg = craft.get("reg", craft.get("r", craft.get("Reg", "")))
+    reg: str = str(_reg).strip().upper()
+
+    _cat = craft.get("cat", craft.get("Category", craft.get("category", "")))
+    cat: str = str(_cat).strip().upper()
+
+    _squawk = craft.get("squawk", craft.get("Squawk", ""))
+    squawk: str = str(_squawk).strip().upper()
+
+    _type = craft.get("t", craft.get("TargetType", 0))
+    craft_type: str = str(_type).strip().upper()
 
     alt_upper: int = int(config.get("ALT_UPPER", "0"))
     alt_lower: int = int(config.get("ALT_LOWER", "0"))
@@ -201,12 +217,30 @@ def adsb_to_cot_xml(  # NOQA pylint: disable=too-many-locals,too-many-branches,t
         __adsb.set("icao", icao_hex)
 
     if cat:
+        category = aircot.set_category(cat, known_craft)
         remarks_fields.append(f"Cat.: {cat}")
         __adsb.set("cat", cat)
 
     if craft_type:
+        __adsb.set("craft_type", str(craft_type))
         remarks_fields.append(f"Type:{craft_type}")
-        __adsb.set("type", craft_type)
+
+        craft_type_name: Union[str, None] = None
+        if craft_type == 0:
+            craft_type_name = "Mode S"
+        elif craft_type == 1:
+            craft_type_name = "ADS-B"
+        elif craft_type == 2:
+            craft_type_name = "ADS-R"
+        elif craft_type == 3:
+            craft_type_name = "TIS-B S"
+            tisb = True
+        elif craft_type == 4:
+            craft_type_name = "TIS-B"
+            tisb = True
+        if craft_type_name:
+            remarks_fields.append(f"ADS-B Type: {craft_type}")
+            __adsb.set("craft_type", craft_type)
 
     cot_uid: str = ""
     if "REG" in uid_key and reg:
@@ -233,28 +267,69 @@ def adsb_to_cot_xml(  # NOQA pylint: disable=too-many-locals,too-many-branches,t
     _, callsign = aircot.set_name_callsign(
         icao_hex, reg, craft_type, flight, known_craft
     )
+
     cat = aircot.set_category(cat, known_craft)
-    cot_type = aircot.set_cot_type(icao_hex, cat, flight, known_craft)
+
+    if tisb:
+        cot_type = "a-u-A"
+    else:
+        cot_type = aircot.set_cot_type(icao_hex, category, flight, known_craft)
+
+    nac_p = craft.get("NACp", craft.get("nac_p", 0.0))
+    nac_v = craft.get("NACv", craft.get("nac_v", nac_p))
+
+    if craft.get("OnGround"):
+        ground_const = 51.56
+        hae = pytak.DEFAULT_COT_VAL
+    else:
+        ground_const = 56.57
+        # Multiply alt_geom by "Clarke 1880 (international foot)"
+        hae = aircot.functions.get_hae(
+            craft.get("Alt", craft.get("alt_geom", craft.get("alt_geom_x")))
+        )
+
+    ce = str(float(nac_p) + ground_const)
+    le = str(float(nac_v) + 12.5)
 
     contact: ET.Element = ET.Element("contact")
     contact.set("callsign", callsign)
 
+    uid = ET.Element("UID")
+    uid.set("Droid", str(callsign))
+
     track: ET.Element = ET.Element("track")
-    track.set("course", str(craft.get("trk", craft.get("track", "9999999.0"))))
-    track.set("speed", aircot.functions.get_speed(craft.get("gs")))
 
-    detail = ET.Element("detail")
+    course = craft.get(
+        "trk", craft.get("track", craft.get("Track", pytak.DEFAULT_COT_VAL))
+    )
+    track.set("course", str(course))
 
+    _speed = craft.get("gs", craft.get("Speed", 0.0))
+    speed = aircot.functions.get_speed(_speed)
+    track.set("speed", str(speed))
+
+    track.set("slope", str(craft.get("Vvel", pytak.DEFAULT_COT_VAL)))
+
+    _radio = ET.Element("_radio")
+    _signal = craft.get("SignalLevel", craft.get("rssi"))
+    if _signal:
+        __adsb.set("signalLevel", str(_signal))
+        _radio.set("signal", str(_signal))
+
+    remarks_fields.append(f"FEED_URL: {config.get('FEED_URL', '')}")
+    __adsb.set("feed_url", config.get("FEED_URL", ""))
     # Remarks should always be the first sub-entity within the Detail entity.
     remarks = ET.Element("remarks")
     remarks_fields.append(f"{cot_host_id}")
     _remarks = " ".join(list(filter(None, remarks_fields)))
     remarks.text = _remarks
-    detail.append(remarks)
 
-    detail.append(contact)
+    detail = ET.Element("detail")
     detail.append(track)
+    detail.append(contact)
+    detail.append(remarks)
     detail.append(__adsb)
+    detail.append(_radio)
 
     icon = known_craft.get("ICON")
     if icon:
@@ -265,17 +340,16 @@ def adsb_to_cot_xml(  # NOQA pylint: disable=too-many-locals,too-many-branches,t
     cot_d = {
         "lat": str(lat),
         "lon": str(lon),
-        "ce": str(craft.get("nac_p", "9999999.0")),
-        "le": str(craft.get("nac_v", "9999999.0")),
-        "hae": aircot.functions.get_hae(
-            craft.get("alt_geom", craft.get("alt_geom_x"))
-        ),  # Multiply alt_geom by "Clarke 1880 (international foot)"
+        "ce": str(ce),
+        "le": str(le),
+        "hae": str(hae),
         "uid": cot_uid,
         "cot_type": cot_type,
         "stale": cot_stale,
     }
     cot = pytak.gen_cot_xml(**cot_d)
     cot.set("access", config.get("COT_ACCESS", pytak.DEFAULT_COT_ACCESS))
+    cot.set("qos", "1-r-c")
 
     _detail = cot.findall("detail")[0]
     flowtags = _detail.findall("_flow-tags_")

@@ -1,3 +1,16 @@
+## ADSBCOT 9.0.0
+
+- Merged ADSBXCOT functionality into ADSBCOT. 
+- Merged StratuxCOT functionality into ADSBCOT.
+- Code fixes & documentation improvements.
+- Remove Python 3.6 support.
+- Removed legacy feed url parameters. Only use FEED_URL going forward.
+- Renamed _aircotx_ CoT Element to __adsb.
+- Added _radio CoT Element with SIGINT data (when available).
+- Fixed #49: Windows MIME Type error.
+- Fixed #26: Added Dockerfile for Docker support (Thanks @chriselsen)
+- Fixed #43: Inotify file moved, reading stops.
+
 ## ADSBCOT 8.0.2
 
 Happy Summer Solstice!

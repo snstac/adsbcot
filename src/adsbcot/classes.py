@@ -29,6 +29,7 @@ from typing import Optional, Union
 from urllib.parse import ParseResult, ParseResultBytes, urlparse
 
 import aiohttp
+import websockets
 import pytak
 import aircot
 import adsbcot
@@ -67,28 +68,23 @@ class ADSBWorker(pytak.QueueWorker):
             self._logger.info("Using KNOWN_CRAFT: %s", known_craft)
             self.known_craft_db = aircot.read_known_craft(known_craft)
 
-    async def handle_data(self, data: list) -> None:
-        """Handle Data from ADS-B receiver: Render to CoT, put on TX queue.
-
-        Parameters
-        ----------
-        data : `list[dict, ]`
-            List of craft data as key/value arrays.
-        """
-        if not isinstance(data, list):
-            self._logger.warning("Invalid aircraft data, should be a Python `list`.")
-            return
-
+    async def handle_data(self, data: Union[list, dict]) -> None:
+        """Handle Data from ADS-B receiver: Render to CoT, put on TX queue."""
         if not data:
             self._logger.warning("Empty aircraft list")
             return
 
-        lod = len(data)
-        i = 1
-        for craft in data:
-            i += 1
-            icao = await self.process_craft(craft)
-            self._logger.debug("Handling %s/%s ICAO: %s", i, lod, icao)
+        if isinstance(data, list):
+            lod = len(data)
+            i = 1
+            for craft in data:
+                i += 1
+                icao = await self.process_craft(craft)
+                self._logger.debug("Handling %s/%s ICAO: %s", i, lod, icao)
+        elif isinstance(data, dict):
+            # Handle a single aircraft data dictionary
+            icao = await self.process_craft(data)
+            self._logger.debug("Handling ICAO: %s", icao)
 
     async def process_craft(self, craft: dict) -> Optional[str]:
         """Process a single aircraft data dictionary.
@@ -106,7 +102,13 @@ class ADSBWorker(pytak.QueueWorker):
             self._logger.warning("Aircraft list item was not a Python `dict`.")
             return None
 
-        icao: str = craft.get("hex", craft.get("icao", ""))
+        icao: Union[str, None] = None
+        icao_int: str = craft.get("Icao_addr", "")  # Stratux: 24-bit ICAO address
+        if icao_int:
+            icao = aircot.icao_int_to_hex(icao_int)
+        else:
+            icao = craft.get("hex", craft.get("icao", ""))
+
         if icao:
             icao = icao.strip().upper()
         else:
@@ -244,10 +246,9 @@ class ADSBWorker(pytak.QueueWorker):
 
     async def run(self, _=-1) -> None:
         """Run this Thread, Reads from Pollers."""
-        self._logger.info("Running %s", self.__class__)
 
         url: Optional[bytes] = self.config.get("FEED_URL")
-        if not url:
+        if not url or url == "":
             raise ValueError("Please specify a FEED_URL.")
 
         poll_interval: Union[int, str, None] = self.config.get("POLL_INTERVAL")
@@ -257,6 +258,10 @@ class ADSBWorker(pytak.QueueWorker):
                 adsbcot.DEFAULT_POLL_INTERVAL,
             )
             poll_interval = adsbcot.DEFAULT_POLL_INTERVAL
+
+        self._logger.info(
+            "Running %s at %ss for %s", self.__class__, poll_interval, url
+        )
 
         known_craft: bytes = self.config.get("KNOWN_CRAFT", "")
         if known_craft:
@@ -282,6 +287,18 @@ class ADSBWorker(pytak.QueueWorker):
                     )
                     await self.get_feed(url)
                     await asyncio.sleep(int(poll_interval))
+        elif "ws" in url_scheme:
+            try:
+                async with websockets.connect(url) as websocket:
+                    self._logger.info("Connected to: %s", url)
+                    async for message in websocket:
+                        self._logger.debug("message=%s", message)
+                        if message:
+                            j_event = json.loads(message)
+                            await self.handle_data(j_event)
+            except websockets.exceptions.ConnectionClosedError:
+                self._logger.warning("Websocket closed, reconnecting...")
+                await asyncio.sleep(2)
         elif "file" in url_scheme:
             if importlib.util.find_spec("asyncinotify") is None:
                 self._logger.info("asyncinotify not installed, using file polling.")
