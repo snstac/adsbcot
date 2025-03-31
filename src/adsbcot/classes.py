@@ -184,7 +184,7 @@ class ADSBWorker(pytak.QueueWorker):
 
         url_b = str(url)
 
-        api_key: str = self.config.get("API_KEY")
+        api_key: str = self.config.get("API_KEY", "")
         headers = {"api-auth": api_key}
 
         # Support for either direct ADSBX API, or RapidAPI:
