@@ -18,21 +18,15 @@
 
 """ADS-B to TAK Gateway."""
 
-__version__ = "8.0.2"
+__version__ = "8.1.0"
 
-# COMPAT Python 3.6 test/build work-around:
-try:
-    from .constants import (  # NOQA
-        DEFAULT_POLL_INTERVAL,
-        DEFAULT_TCP_RAW_PORT,
-        DEFAULT_TCP_BEAST_PORT,
-        DEFAULT_FEED_URL,
-    )
+from .constants import (  # NOQA
+    DEFAULT_POLL_INTERVAL,
+    DEFAULT_TCP_RAW_PORT,
+    DEFAULT_TCP_BEAST_PORT,
+    DEFAULT_FEED_URL,
+)
 
-    from .functions import adsb_to_cot, create_tasks  # NOQA
+from .functions import adsb_to_cot, create_tasks  # NOQA
 
-    from .classes import ADSBWorker, ADSBNetReceiver, ADSBNetWorker  # NOQA
-except ImportError as exc:
-    import warnings
-
-    warnings.warn(f"COMPAT Python 3.6. Ignoring Exception {str(exc)}")
+from .classes import ADSBWorker, ADSBNetReceiver, ADSBNetWorker  # NOQA

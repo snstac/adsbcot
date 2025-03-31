@@ -71,7 +71,7 @@ def create_tasks(config: SectionProxy, clitool: pytak.CLITool) -> Set[pytak.Work
         )
 
     # Gateway code:
-    feed_url: ParseResult = urlparse(config.get("FEED_URL"))
+    feed_url: ParseResult = urlparse(config.get("FEED_URL", ""))
 
     # ADS-B Workers (receivers):
     if feed_url.scheme in ["http", "file"]:

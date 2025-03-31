@@ -34,14 +34,14 @@ import aircot
 import adsbcot
 
 
-# We don't require inotify, as it only would work on Linux
+# Note: inotify is optional and only functional on Linux systems.
 try:
     from asyncinotify import Inotify, Mask
 except ImportError as exc:
     warnings.warn(str(exc))
     warnings.warn("ADSBCOT ignoring ImportError for: asyncinotify")
 
-# We won't use pyModeS if it isn't installed:
+# Skip importing pyModeS if it is not installed:
 try:
     import pyModeS.streamer.source
     import pyModeS.streamer.decode
@@ -52,7 +52,7 @@ except ImportError as exc:
 
 
 class ADSBWorker(pytak.QueueWorker):
-    """Read ADS-B Data from inputs, serialize to CoT, and put on TX queue."""
+    """Process ADS-B data from various sources, convert to CoT, and enqueue for transmission."""
 
     def __init__(self, queue, config) -> None:
         """Initialize this class."""
@@ -127,6 +127,7 @@ class ADSBWorker(pytak.QueueWorker):
     async def get_feed(self, url: bytes) -> None:
         """Poll the ADS-B feed and pass data to the data handler."""
         if not self.session:
+            self._logger.warning("No aiohttp session available.")
             return
 
         url_b = str(url)
@@ -139,10 +140,12 @@ class ADSBWorker(pytak.QueueWorker):
 
             json_resp = await resp.json()
             if json_resp is None:
+                self._logger.debug("Empty JSON response from %s", url)
                 return
 
             data = json_resp.get("aircraft", json_resp.get("ac"))
             if data is None:
+                self._logger.debug("No aircraft data returned from %s", url)
                 return
 
             self._logger.info(
@@ -204,6 +207,8 @@ class ADSBWorker(pytak.QueueWorker):
                     )
 
                     async for event in inotify:
+                        if event.mask & Mask.IGNORED:
+                            raise RuntimeError("inotify watch was removed.")
                         if str(event.path) == path:
                             await self.get_file_feed(feed_url)
 
@@ -453,6 +458,10 @@ class FileWatcher(pytak.QueueWorker):
 
     async def get_feed(self, url: bytes) -> None:
         """Poll the ADS-B feed and pass data to the data handler."""
+        if not self.session:
+            self._logger.warning("No aiohttp session available.")
+            return
+
         async with self.session.get(url) as resp:
             if resp.status != 200:
                 response_content = await resp.text()
@@ -475,13 +484,7 @@ class FileWatcher(pytak.QueueWorker):
 
     async def run(self, _=-1) -> None:
         """Run this Thread, Reads from Pollers."""
-        dump1090_url: bytes = self.config.get("DUMP1090_URL", "")
-        if dump1090_url:
-            warnings.warn(
-                "DUMP1090_URL setting is DEPRECATED. Please use FEED_URL instead."
-            )
-
-        url: bytes = self.config.get("FEED_URL", dump1090_url)
+        url: bytes = self.config.get("FEED_URL", adsbcot.DEFAULT_FEED_URL)
         if not url:
             raise ValueError("Please specify a FEED_URL.")
 
