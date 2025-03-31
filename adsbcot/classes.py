@@ -138,7 +138,7 @@ class ADSBWorker(pytak.QueueWorker):
                 self._logger.error(response_content)
                 return
 
-            json_resp = await resp.json()
+            json_resp = await resp.json(content_type=None)
             if json_resp is None:
                 self._logger.debug("Empty JSON response from %s", url)
                 return
@@ -469,7 +469,7 @@ class FileWatcher(pytak.QueueWorker):
                 self._logger.error(response_content)
                 return
 
-            json_resp = await resp.json()
+            json_resp = await resp.json(content_type=None)
             if json_resp is None:
                 return
 
