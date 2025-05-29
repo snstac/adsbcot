@@ -33,6 +33,7 @@ import websockets
 import pytak
 import aircot
 import adsbcot
+from adsbcot.geofence import Geofence
 
 
 # Note: inotify is optional and only functional on Linux systems.
@@ -62,6 +63,7 @@ class ADSBWorker(pytak.QueueWorker):
         self.session: Optional[aiohttp.ClientSession] = None
         self.uid_key: str = self.config.get("UID_KEY", "ICAO")
         self.altitudes: dict = {}
+        self.geofence = Geofence(config)
 
         known_craft = self.config.get("KNOWN_CRAFT")
         if known_craft and os.path.exists(known_craft):
@@ -140,6 +142,15 @@ class ADSBWorker(pytak.QueueWorker):
 
         if not craft:
             self._logger.debug("No altitude data for craft: %s", icao)
+            return None
+
+        # Check if aircraft is within geofence
+        lat = craft.get("lat")
+        lon = craft.get("lon")
+        alt = craft.get("alt_baro")
+        
+        if not self.geofence.is_in_geofence(lat, lon, alt):
+            self._logger.debug("Aircraft %s outside geofence", icao)
             return None
 
         event: Optional[bytes] = adsbcot.adsb_to_cot(craft, self.config, known_craft)
