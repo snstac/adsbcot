@@ -51,7 +51,7 @@ Build the docker container.
 ```sh linenums="1"
 git clone https://github.com/snstac/adsbcot.git
 cd adsbcot/
-docker build -t adsbcot .
+docker build -t adsbcot -f docker/Dockerfile .
 ```
 
 Run the docker container with config folder mounted locally. Config files can be edited in the local folder ```/opt/docker/adsbcot/```.

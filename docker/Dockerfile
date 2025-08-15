@@ -29,8 +29,8 @@ RUN rm -R /adsbcot/
 
 # Copy adsbcot configuration
 RUN mkdir /etc/adsbcot/
-COPY adsbcot-docker-example.conf /etc/adsbcot/adsbcot.conf
+COPY docker/adsbcot-docker-example.conf /etc/adsbcot/adsbcot.conf
 
 # Copy start.sh script and define default command for the container
-COPY start.sh /start.sh
+COPY docker/start.sh /start.sh
 CMD ["./start.sh"]
