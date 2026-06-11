@@ -158,7 +158,7 @@ def test_adsb_to_cot_xml(sample_feed):
     assert detail[0].tag == "detail"
 
     contact = detail[0].findall("contact")
-    assert contact[0].attrib["callsign"] == "N739UL"
+    assert contact[0].attrib["callsign"] == "N739UL (A9EE47)"
 
     track = detail[0].findall("track")
     assert track[0].attrib["course"] == "50.1"
@@ -225,7 +225,7 @@ def test_adsb_to_cot_with_known_craft(sample_feed, sample_known_craft):
     assert detail[0].tag == "detail"
 
     contact = detail[0].findall("contact")
-    assert contact[0].attrib["callsign"] == "TACO_01"
+    assert contact[0].attrib["callsign"] == "TACO_01 (A9EE47)"
 
     track = detail[0].findall("track")
     assert track[0].attrib["course"] == "50.1"
