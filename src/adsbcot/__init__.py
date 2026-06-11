@@ -24,8 +24,15 @@ from .constants import (  # NOQA
     DEFAULT_TCP_BEAST_PORT,
     DEFAULT_FEED_URL,
     DEFAULT_RAPIDAPI_HOST,
+    DEFAULT_SENSOR_KEEPALIVE_PERIOD,
+    DEFAULT_SENSOR_LAT,
+    DEFAULT_SENSOR_LON,
+    DEFAULT_SENSOR_HAE,
+    DEFAULT_SENSOR_ID,
+    DEFAULT_SENSOR_COT_TYPE,
+    DEFAULT_SENSOR_PAYLOAD_TYPE,
 )
 
-from .functions import adsb_to_cot, create_tasks  # NOQA
+from .functions import adsb_to_cot, create_tasks, gen_sensor_cot  # NOQA
 
-from .classes import ADSBWorker, ADSBNetReceiver, ADSBNetWorker  # NOQA
+from .classes import ADSBWorker, ADSBNetReceiver, ADSBNetWorker, SensorWorker  # NOQA

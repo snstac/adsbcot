@@ -29,3 +29,14 @@ DEFAULT_TCP_RAW_PORT: int = 30003
 DEFAULT_TCP_BEAST_PORT: int = 30005
 
 DEFAULT_RAPIDAPI_HOST: str = "adsb-exchange1.p.rapidapi.com"
+
+# Sensor keep-alive / heartbeat
+DEFAULT_SENSOR_KEEPALIVE_PERIOD: int = 30
+DEFAULT_SENSOR_LAT: float = 0.0
+DEFAULT_SENSOR_LON: float = 0.0
+DEFAULT_SENSOR_HAE: float = 0.0
+
+import socket as _socket
+DEFAULT_SENSOR_ID: str = f"adsbcot_{_socket.gethostname()}"
+DEFAULT_SENSOR_COT_TYPE: str = "a-f-G-E-S-E"
+DEFAULT_SENSOR_PAYLOAD_TYPE: str = "ADS-B-Receiver"
