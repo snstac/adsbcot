@@ -111,25 +111,48 @@ def _config(**overrides):
     return parser["DEFAULT"]
 
 
+def _build_worker(tmp_path=None, **overrides):
+    """Build an ADSBWorker. MUST be called from inside a running event loop.
+
+    asyncio.Queue() binds to the current event loop on Python < 3.10, and
+    asyncio.run() leaves no current loop behind when it returns -- so building
+    a worker at test-body level works locally on 3.13 and then fails in CI on
+    3.9 with "There is no current event loop", but only in whichever test
+    happens to run after the first asyncio.run(). Building inside the loop is
+    portable across 3.9-3.13 and not order-dependent.
+    """
+    worker = ADSBWorker(asyncio.Queue(), _config(**overrides))
+    if tmp_path is not None:
+        worker.status = pytak.StatusWriter(
+            "adsbcot-test", path=str(tmp_path / "status.json")
+        )
+    worker.put_queue = _noop_put
+    return worker
+
+
 @needs_statuswriter
 class TestStatusSurface:
     """The data the Cockpit plugin reads."""
 
-    def _worker(self, tmp_path, **overrides):
-        worker = ADSBWorker(asyncio.Queue(), _config(**overrides))
-        worker.status = pytak.StatusWriter(
-            "adsbcot-test", path=str(tmp_path / "status.json")
-        )
-        worker.put_queue = _noop_put
-        return worker
+    def _worker(self, tmp_path, action=None, **overrides):
+        """Build a worker and run `action(worker)` in one event loop."""
+        built = {}
+
+        async def _main():
+            worker = _build_worker(tmp_path, **overrides)
+            built["worker"] = worker
+            if action is not None:
+                await action(worker)
+
+        asyncio.run(_main())
+        return built["worker"]
 
     def _doc(self, worker):
         with open(worker.status.path, encoding="utf-8") as handle:
             return json.load(handle)
 
     def test_plotted_aircraft_is_marked_placed(self, tmp_path):
-        worker = self._worker(tmp_path)
-        asyncio.run(worker.process_craft(dict(CRAFT_PLOTTED)))
+        worker = self._worker(tmp_path, lambda w: w.process_craft(dict(CRAFT_PLOTTED)))
 
         doc = self._doc(worker)
         assert doc["counters"]["rx"] == 1
@@ -148,8 +171,9 @@ class TestStatusSurface:
         empty panel on working hardware -- which an operator reads as a fault
         and starts swapping antennas over.
         """
-        worker = self._worker(tmp_path)
-        asyncio.run(worker.process_craft(dict(CRAFT_NO_POSITION)))
+        worker = self._worker(
+            tmp_path, lambda w: w.process_craft(dict(CRAFT_NO_POSITION))
+        )
 
         doc = self._doc(worker)
         assert doc["counters"]["rx"] == 1
@@ -162,8 +186,7 @@ class TestStatusSurface:
 
     def test_craft_without_icao_counted_but_not_shown_as_a_contact(self, tmp_path):
         """It was received; it is not an aircraft we can name."""
-        worker = self._worker(tmp_path)
-        asyncio.run(worker.process_craft(dict(CRAFT_NO_ICAO)))
+        worker = self._worker(tmp_path, lambda w: w.process_craft(dict(CRAFT_NO_ICAO)))
 
         doc = self._doc(worker)
         assert doc["counters"]["rx"] == 1
@@ -172,14 +195,16 @@ class TestStatusSurface:
 
     def test_non_dict_feed_item_is_not_counted_as_received(self, tmp_path):
         """Garbage in the feed is not an aircraft, and must not inflate `rx`."""
-        worker = self._worker(tmp_path)
-        asyncio.run(worker.process_craft("not-an-aircraft"))
+        worker = self._worker(tmp_path, lambda w: w.process_craft("not-an-aircraft"))
         assert not os.path.exists(worker.status.path)
 
     def test_tisb_filter_is_visible_as_a_filter(self, tmp_path):
         """"Why am I seeing so little traffic" must be answerable from the UI."""
-        worker = self._worker(tmp_path, INCLUDE_TISB="false")
-        asyncio.run(worker.process_craft(dict(CRAFT_TISB)))
+        worker = self._worker(
+            tmp_path,
+            lambda w: w.process_craft(dict(CRAFT_TISB)),
+            INCLUDE_TISB="false",
+        )
 
         doc = self._doc(worker)
         assert doc["counters"]["rx"] == 1
@@ -187,11 +212,13 @@ class TestStatusSurface:
         assert "emitted" not in doc["counters"]
 
     def test_known_craft_filter_is_visible_as_a_filter(self, tmp_path):
-        worker = self._worker(tmp_path, INCLUDE_ALL_CRAFT="false")
         # A KNOWN_CRAFT CSV that does not list this aircraft, in the shape
         # aircot.read_known_craft() produces.
-        worker.known_craft_db = {"hex_index": {"DEADBE": {"TYPE": "a-f-A"}}}
-        asyncio.run(worker.process_craft(dict(CRAFT_PLOTTED)))
+        def _filtered(worker):
+            worker.known_craft_db = {"hex_index": {"DEADBE": {"TYPE": "a-f-A"}}}
+            return worker.process_craft(dict(CRAFT_PLOTTED))
+
+        worker = self._worker(tmp_path, _filtered, INCLUDE_ALL_CRAFT="false")
 
         doc = self._doc(worker)
         assert doc["counters"]["rx"] == 1
@@ -200,9 +227,9 @@ class TestStatusSurface:
 
     def test_tracked_reports_aircraft_currently_in_view(self, tmp_path):
         """The number an operator checks an antenna against."""
-        worker = self._worker(tmp_path)
-        asyncio.run(
-            worker.handle_data([dict(CRAFT_PLOTTED), dict(CRAFT_NO_POSITION)])
+        worker = self._worker(
+            tmp_path,
+            lambda w: w.handle_data([dict(CRAFT_PLOTTED), dict(CRAFT_NO_POSITION)]),
         )
 
         # Writes are rate-limited to once a second, so two aircraft handled in
@@ -223,7 +250,10 @@ class TestStatusSurface:
         Get the app name wrong and the gateway writes a status file nobody is
         watching, which presents identically to writing none at all.
         """
-        worker = ADSBWorker(asyncio.Queue(), _config())
+        async def _main():
+            return _build_worker()
+
+        worker = asyncio.run(_main())
         assert worker.status.app_name == "adsbcot"
         assert worker.status.version == adsbcot.__version__
         assert worker.status.path.endswith(os.path.join("adsbcot", "status.json"))
@@ -254,16 +284,22 @@ class TestStatusDegradesVisibly:
         from adsbcot import classes
 
         monkeypatch.setattr(classes, "_StatusWriter", None)
-        worker = ADSBWorker(asyncio.Queue(), _config())
-        assert isinstance(worker.status, classes._NoStatus)
 
         sent = []
+        seen = {}
 
-        async def _capture(event):
-            sent.append(event)
+        async def _main():
+            worker = _build_worker()
+            seen["status"] = worker.status
 
-        worker.put_queue = _capture
-        icao = asyncio.run(worker.process_craft(dict(CRAFT_PLOTTED)))
+            async def _capture(event):
+                sent.append(event)
+
+            worker.put_queue = _capture
+            return await worker.process_craft(dict(CRAFT_PLOTTED))
+
+        icao = asyncio.run(_main())
+        assert isinstance(seen["status"], classes._NoStatus)
         assert icao == "A9EE47"
         assert len(sent) == 1
 
