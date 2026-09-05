@@ -20,6 +20,8 @@
 
 import unittest
 import xml.etree.ElementTree as etree
+from types import SimpleNamespace
+from unittest.mock import patch
 
 import adsbcot
 
@@ -153,6 +155,25 @@ class FunctionsTestCase(unittest.TestCase):
     """
     Test class for functions... functions.
     """
+
+    def test_sensor_beacon_switch(self):
+        """Receiver beacons default on and accept common false values."""
+        enabled = adsbcot.functions.sensor_beacon_enabled
+        self.assertTrue(enabled({}))
+        for value in ("0", "false", "False", "no", "off"):
+            with self.subTest(value=value):
+                self.assertFalse(enabled({"SENSOR_BEACON": value}))
+
+    def test_create_tasks_can_omit_sensor_beacon(self):
+        """Disabling the receiver beacon keeps aircraft processing enabled."""
+        clitool = SimpleNamespace(tx_queue=object())
+        config = {"FEED_URL": "file:///tmp/aircraft.json", "SENSOR_BEACON": "0"}
+        with patch.object(adsbcot, "ADSBWorker", return_value="aircraft"), patch.object(
+            adsbcot, "SensorWorker", return_value="receiver"
+        ) as sensor_worker:
+            tasks = adsbcot.functions.create_tasks(config, clitool)
+        self.assertEqual(tasks, {"aircraft"})
+        sensor_worker.assert_not_called()
 
     def test_adsb_to_cot_xml(self):
         """Test that adsb_to_cot serializses ADS-B as valid Cursor on Target XML Object."""

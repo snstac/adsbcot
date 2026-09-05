@@ -46,6 +46,12 @@ Logger = logging.getLogger(__name__)
 Debug = bool(os.getenv("DEBUG", False))
 
 
+def sensor_beacon_enabled(config: Union[SectionProxy, dict]) -> bool:
+    """Return whether the periodic receiver beacon is enabled."""
+    value = config.get("SENSOR_BEACON", "1")
+    return str(value).strip().lower() not in {"0", "false", "no", "off"}
+
+
 def create_tasks(config: SectionProxy, clitool: pytak.CLITool) -> Set[pytak.Worker,]:
     """Create specific coroutine task set for this application.
 
@@ -103,7 +109,8 @@ def create_tasks(config: SectionProxy, clitool: pytak.CLITool) -> Set[pytak.Work
 
         tasks.add(adsbcot.ADSBNetWorker(clitool.tx_queue, net_queue, config, data_type))
 
-    tasks.add(adsbcot.SensorWorker(clitool.tx_queue, config))
+    if sensor_beacon_enabled(config):
+        tasks.add(adsbcot.SensorWorker(clitool.tx_queue, config))
 
     return tasks
 
