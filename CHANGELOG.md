@@ -1,3 +1,8 @@
+## ADSBCoT 9.2.2
+
+- Add `SENSOR_BEACON=0` to disable the periodic receiver marker without
+  disabling aircraft tracks.
+
 ## ADSBCoT 9.2.1
 
 - Use PyTAK shared CoT event, point, detail, remarks, and serialization helpers.

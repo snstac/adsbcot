@@ -20,6 +20,11 @@ ADSBCOT has the following built-in configuration parameters:
     * Default: ``3`` seconds
 
     If the `FEED_URL` is of type HTTP, the period, in seconds, to poll this URL.
+
+* **`SENSOR_BEACON`**:
+    * Default: ``1``
+
+    Set to ``0`` to disable the periodic receiver marker. Aircraft tracks remain enabled.
     
 * **`ALT_UPPER`**:
     * Default: unset
@@ -52,7 +57,6 @@ ADSBCOT has the following built-in configuration parameters:
     If `True`, only passes TIS-B tracks (`INCLUDE_TISB` must also be `True`).
 
 Additional configuration parameters, including TAK Server configuration, are included in the [PyTAK Configuration](https://pytak.readthedocs.io/en/latest/configuration/) documentation.
-
 
 
 
