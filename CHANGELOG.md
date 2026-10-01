@@ -1,3 +1,10 @@
+## Unreleased
+
+- Accept `https://` `FEED_URL`s (previously no worker was created and nothing
+  was reported). Fixes #59.
+- Require `aircot >= 4.0.0`; callsigns now carry the ICAO hex suffix that the
+  test suite and CoT output expect. Fixes #61.
+
 ## ADSBCoT 9.2.2
 
 - Add `SENSOR_BEACON=0` to disable the periodic receiver marker without
