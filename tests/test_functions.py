@@ -18,6 +18,9 @@
 
 """ADSBCOT Function Tests."""
 
+import configparser
+import pathlib
+import re
 import unittest
 import xml.etree.ElementTree as etree
 from types import SimpleNamespace
@@ -174,6 +177,46 @@ class FunctionsTestCase(unittest.TestCase):
             tasks = adsbcot.functions.create_tasks(config, clitool)
         self.assertEqual(tasks, {"aircraft"})
         sensor_worker.assert_not_called()
+
+    def test_create_tasks_accepts_http_family_schemes(self):
+        """HTTP(S), WebSocket and file FEED_URLs each create an ADSBWorker (#59)."""
+        for url in (
+            "http://example.com/data/aircraft.json",
+            "https://api.airplanes.live/v2/point/37.8/-122.0/25",
+            "ws://example.com/feed",
+            "wss://example.com/feed",
+            "file:///tmp/aircraft.json",
+        ):
+            with self.subTest(url=url):
+                clitool = SimpleNamespace(tx_queue=object())
+                config = {"FEED_URL": url, "SENSOR_BEACON": "0"}
+                with patch.object(adsbcot, "ADSBWorker", return_value="aircraft"):
+                    tasks = adsbcot.functions.create_tasks(config, clitool)
+                self.assertEqual(tasks, {"aircraft"})
+
+    def test_create_tasks_https_with_sensor_beacon(self):
+        """An https FEED_URL yields both the aircraft and receiver workers (#59)."""
+        clitool = SimpleNamespace(tx_queue=object())
+        config = {"FEED_URL": "https://api.adsb.lol/v2/point/61.16/-149.83/75"}
+        with patch.object(adsbcot, "ADSBWorker", return_value="aircraft"), patch.object(
+            adsbcot, "SensorWorker", return_value="receiver"
+        ):
+            tasks = adsbcot.functions.create_tasks(config, clitool)
+        self.assertIn("aircraft", tasks)
+
+    def test_aircot_requirement_covers_callsign_suffix(self):
+        """Callsign tests expect aircot >= 4.0.0, which appends the ICAO hex (#61)."""
+        setup_cfg = pathlib.Path(__file__).resolve().parent.parent / "setup.cfg"
+        parser = configparser.ConfigParser()
+        parser.read(setup_cfg)
+        requirement = next(
+            line.strip()
+            for line in parser["options"]["install_requires"].splitlines()
+            if line.strip().lower().startswith("aircot")
+        )
+        match = re.search(r">=\s*(\d+)", requirement)
+        self.assertIsNotNone(match, requirement)
+        self.assertGreaterEqual(int(match.group(1)), 4)
 
     def test_adsb_to_cot_xml(self):
         """Test that adsb_to_cot serializses ADS-B as valid Cursor on Target XML Object."""

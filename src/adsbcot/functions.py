@@ -84,7 +84,7 @@ def create_tasks(config: SectionProxy, clitool: pytak.CLITool) -> Set[pytak.Work
     feed_url: ParseResult = urlparse(config.get("FEED_URL", ""))
 
     # ADS-B Workers (receivers):
-    if feed_url.scheme in ["http", "file", "ws", "wss"]:
+    if feed_url.scheme in ["http", "https", "file", "ws", "wss"]:
         # HTTP, WebSocket, or file-based input:
         tasks.add(adsbcot.ADSBWorker(clitool.tx_queue, config))
     elif "tcp" in feed_url.scheme:
