@@ -560,7 +560,7 @@ class ADSBNetWorker(ADSBWorker):
                     "hex": key,
                     "lat": val.get("lat"),
                     "lon": val.get("lon"),
-                    "flight": val.get("call", key).replace("_", ""),
+                    "flight": (val.get("call") or key).replace("_", ""),
                     "alt_geom": val.get("alt"),
                     "gs": val.get("gs"),
                     "reg": val.get("r"),
